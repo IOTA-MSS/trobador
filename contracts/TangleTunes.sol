@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-contract Trobador {
+contract TangleTunes {
     address owner = msg.sender;
     uint DIST_FEE = 10; // distributor fee in percentage
     mapping(address => User) public users;
