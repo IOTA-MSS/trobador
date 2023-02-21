@@ -8,6 +8,49 @@ import "../evm-library/ISCTypes.sol";
  * @author Daniel Melero
  */
 interface TangleTunes {
+    
+    struct User {
+        bool exists;
+        string username;
+        string description;
+        string server;
+        uint balance;
+        bool is_validator;
+    }
+
+    struct Song {
+        bool exists;
+        address author;
+        string name;
+        uint price;
+        uint length;
+        uint duration;
+        bytes32[] chunks;
+        address[] distributors;
+    }
+
+    /**
+     * @notice provides account linked to a given address
+     * @param _user address
+     * @return account details
+     */
+    function users(address _user) external view returns (User memory);
+
+    /**
+     * @notice provides metadata of a given song
+     * @dev does not provide the list of chunks or the list of distributors
+     * @param _song identification value
+     * @return song details
+     */
+    function songs(bytes32 _song) external view returns (Song memory);
+
+    /**
+     * @notice provides song identification value of a given index
+     * @param _index in the list of songs (starting at 0)
+     * @return song id
+     */
+    function song_list(uint _index) external view returns (bytes32);
+
     /**
      * @notice modifies validator status of the given account
      * @dev only accessible to the smart contract deployer
@@ -23,6 +66,19 @@ interface TangleTunes {
     function create_user(string memory _name, string memory _desc) external;
 
     /**
+     * @notice changes description in sender adress' account
+     * @param _desc account description
+     */
+    function edit_description(string memory _desc) external;
+
+    /**
+     * @notice changes server information in sender address' account
+     * @dev url string contains: <ip>:<port>:<pub_key_cert>
+     * @param _server details (TODO: MIGHT CHANGE)
+     */
+    function edit_server_info(string memory _server) external;
+
+    /**
      * @notice adds value to the sender address' account
      */
     function deposit() external payable;
@@ -32,7 +88,7 @@ interface TangleTunes {
      * @param _amount to be withdrawn
      * @param _target address in the L1 ledger
      */
-    function withdraw(uint256 _amount, L1Address memory _target) external;
+    function withdraw(uint _amount, L1Address memory _target) external;
 
     /**
      * @notice uploads song's metadata to the platform
@@ -59,20 +115,14 @@ interface TangleTunes {
      * @param _song identification value
      * @param _price per chunk
      */
-    function edit_price(bytes32 _song, uint256 _price) external;
-
-    /**
-     * @notice changes server information in sender address' account
-     * @dev url string contains: <ip>:<port>:<pub_key_cert>
-     * @param _server details
-     */
-    function edit_server_info(string memory _server) external;
+    function edit_price(bytes32 _song, uint _price) external;
 
     /**
      * @notice signs up for distribution on a given song
      * @param _song identification value
+     * @param _fee per chunk
      */
-    function distribute(bytes32 _song) external;
+    function distribute(bytes32 _song, uint _fee) external;
 
     /**
      * @notice unlist for distribution on a given song
@@ -84,33 +134,18 @@ interface TangleTunes {
      * @notice checks if a given account is currently distributing a given song
      * @param _song identification value
      * @param _distributor address
-     * @return true if it is listed as a distributor on the given song, false if not
+     * @return true if it is listed as a distributor on the given song, false otherwise
      */
     function is_distributing(bytes32 _song, address _distributor) external view returns (bool);
 
     /**
-     * @notice creates a streaming session for the given song
-     * @dev the sender address' account must have enough funds to stream the entire song
-     * @param _song identification value
-     * @param _distributor address
-     */
-    function create_session(bytes32 _song, address _distributor) external;
-
-    /**
+     * TODO: provide based on distribution fee and/or staking value (+ some randomness)
      * @notice provides a random distributor for a given song
      * @param _song identification value
      * @return the address of an account listed as distributor of the given song
      */
     function get_rand_distributor(bytes32 _song) external view returns (address);
-
-    /**
-     * @notice generates a session identification value
-     * @param _listener address
-     * @param _distributor address
-     * @param _song identification value
-     * @return session id
-     */
-    function gen_session_id(address _listener, address _distributor, bytes32 _song) external pure returns (bytes32);
+    // get_distributor(bytes32 _song, uint index, uint region) external view returns (address[]);
 
     /**
      * @notice provides the amount of chunks in a given song
@@ -118,8 +153,21 @@ interface TangleTunes {
      * @return amount of chunks
      */
     function chunks_length(bytes32 _song) external view returns (uint);
-    function get_chunk(bytes32 session, uint chunk_index) external;
-    function check_chunk(bytes32 song, uint index, bytes32 _chunk) external view returns (bool);
-    function is_chunk_paid(bytes32 session, uint index) external view returns (bool);
-    function close_session(bytes32 session) external;
+
+    /**
+     * @notice pay author and distributor for a given chunk
+     * @param _song identification value
+     * @param _index of the chunk
+     * @param _distributor address
+     */
+    function get_chunk(bytes32 _song, uint _index, address _distributor) external;
+
+    /**
+     * @notice check authenticity of a given chunk
+     * @param _song identification value
+     * @param _index of the chunk
+     * @param _chunk keccak hash value of the data
+     * @return true if the data received is authentic, false otherwise
+     */
+    function check_chunk(bytes32 _song, uint _index, bytes32 _chunk) external view returns (bool);
 }
