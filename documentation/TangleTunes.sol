@@ -35,6 +35,30 @@ interface TangleTunes {
         uint fee;
     }
 
+    struct Song_listing {
+        bytes32 song_id;
+        string song_name;
+        string author_name;
+        uint price;
+        uint length;
+        uint duration;
+    }
+
+    /**
+     * @notice provides the amount of songs available
+     * @return amount of songs
+     */
+    function song_list_length() external view returns (uint256);
+
+    /**
+     * @notice provides all displayable information of a given amount of songs
+     * @dev a song has been removed and should not be displayed if its id is 0x00
+     * @param _index in list of songs
+     * @param _amount of songs returned
+     * @return list of songs
+     */
+    function get_songs(uint _index, uint _amount) external view returns (Song_listing[] memory);
+
     /**
      * @notice provides account linked to a given address
      * @param _user address
@@ -77,6 +101,12 @@ interface TangleTunes {
      * @param _desc account description
      */
     function create_user(string memory _name, string memory _desc) external;
+
+    /**
+     * @notice removes all user information linked to the sender address
+     * @dev also removes all music linked to the account
+     */
+    function delete_user() external;
 
     /**
      * @notice changes description in sender adress' account

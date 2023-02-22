@@ -57,6 +57,45 @@ contract TangleTunes {
         //TODO: Staking value (after MVP)
     }
 
+    struct Song_listing {
+        bytes32 song_id;
+        string song_name;
+        string author_name;
+        uint256 price;
+        uint256 length;
+        uint256 duration;
+    }
+
+    function song_list_length() external view returns (uint256) {
+        return song_list.length;
+    }
+
+    function get_songs(uint256 _index, uint256 _amount) external view returns (Song_listing[] memory) {
+        //Check all indexes are valid
+        require(_index + _amount < song_list.length, "Indexes out of bounds");
+
+        Song_listing[] memory lst = new Song_listing[](_amount);
+        for (uint256 i = 0; i < _amount; i++) {
+            bytes32 song_id = song_list[_index + i];
+
+            //Only add information if song is still available (Could have been removed)
+            if (song_id != bytes32(0)) {
+                Song storage song_obj = songs[song_id];
+                lst[i] = Song_listing(
+                    song_id,
+                    song_obj.name,
+                    users[song_obj.author].username,
+                    song_obj.price,
+                    song_obj.length,
+                    song_obj.duration
+                );
+
+            }
+        }
+        
+        return lst;
+    }
+
     function manage_validators(address _validator) external onlyOwner {
         require(users[_validator].exists, "Validator is not a valid user");
         users[_validator].is_validator = !users[_validator].is_validator;
@@ -65,6 +104,11 @@ contract TangleTunes {
     function create_user(string memory _name, string memory _desc) external {
         require(!users[msg.sender].exists, "User already exists");
         users[msg.sender] = User(true, _name, _desc, "", 0, false);
+    }
+
+    function delete_user() external userExists {
+        //TODO: remove songs linked to this user
+        delete users[msg.sender];
     }
 
     function edit_description(string memory _desc) external userExists {
