@@ -29,6 +29,12 @@ interface TangleTunes {
         address[] distributors;
     }
 
+    struct Distribution {
+        bool exists;
+        uint index;
+        uint fee;
+    }
+
     /**
      * @notice provides account linked to a given address
      * @param _user address
@@ -43,6 +49,13 @@ interface TangleTunes {
      * @return song details
      */
     function songs(bytes32 _song) external view returns (Song memory);
+
+    /**
+     * @notice provides metadata about a given distribution
+     * @param _distribution identification value
+     * @return distribution details
+     */
+    function distributions(bytes32 _distribution) external view returns (Distribution memory);
 
     /**
      * @notice provides song identification value of a given index
@@ -99,7 +112,7 @@ interface TangleTunes {
      * @param _duration of the song in seconds
      * @param _chunks list of the keccak hash value of each chunk
      */
-    function upload_song(string memory _name, uint _price, uint _length, uint _duration, bytes32[] memory _chunks) external;
+    function upload_song(address _author, string memory _name, uint _price, uint _length, uint _duration, bytes32[] memory _chunks) external;
 
     /**
      * @notice generates the identification value of a song
@@ -118,6 +131,13 @@ interface TangleTunes {
     function edit_price(bytes32 _song, uint _price) external;
 
     /**
+     * @notice generates the identification value of a distribution
+     * @param _song identification value
+     * @param _distributor address
+     */
+    function gen_distribution_id(bytes32 _song, address _distributor) external pure returns (bytes32);
+
+    /**
      * @notice signs up for distribution on a given song
      * @param _song identification value
      * @param _fee per chunk
@@ -129,14 +149,6 @@ interface TangleTunes {
      * @param _song identification value
      */
     function undistribute(bytes32 _song) external;
-
-    /**
-     * @notice checks if a given account is currently distributing a given song
-     * @param _song identification value
-     * @param _distributor address
-     * @return true if it is listed as a distributor on the given song, false otherwise
-     */
-    function is_distributing(bytes32 _song, address _distributor) external view returns (bool);
 
     /**
      * TODO: provide based on distribution fee and/or staking value (+ some randomness)
