@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-contract TangleTunes {
+import "../documentation/TangleTunes.sol";
+
+contract TangleTunes is TangleTunesI {
     address owner = msg.sender;
 
     mapping(address => User) public users;
@@ -55,15 +57,6 @@ contract TangleTunes {
         uint256 index;
         uint256 fee;
         //TODO: Staking value (after MVP)
-    }
-
-    struct Song_listing {
-        bytes32 song_id;
-        string song_name;
-        string author_name;
-        uint256 price;
-        uint256 length;
-        uint256 duration;
     }
 
     function song_list_length() external view returns (uint256) {
@@ -124,7 +117,11 @@ contract TangleTunes {
         users[msg.sender].balance += msg.value;
     }
 
-    //TODO: Transfer to L1 instead
+    
+    function withdraw(uint _amount, L1Address memory _target) external {
+        //TODO: implement
+    }
+
     function withdraw(uint256 amount) external userExists {
         uint256 balance = users[msg.sender].balance;
         require(balance >= amount, "User do not have the demanded balance");

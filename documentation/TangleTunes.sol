@@ -7,33 +7,7 @@ import "../evm-library/ISCTypes.sol";
  * @title TangleTunes: backend logic for a P2P music streaming application
  * @author Daniel Melero
  */
-interface TangleTunes {
-    
-    struct User {
-        bool exists;
-        string username;
-        string description;
-        string server;
-        uint balance;
-        bool is_validator;
-    }
-
-    struct Song {
-        bool exists;
-        address author;
-        string name;
-        uint price;
-        uint length;
-        uint duration;
-        bytes32[] chunks;
-        address[] distributors;
-    }
-
-    struct Distribution {
-        bool exists;
-        uint index;
-        uint fee;
-    }
+interface TangleTunesI {
 
     struct Song_listing {
         bytes32 song_id;
@@ -62,24 +36,24 @@ interface TangleTunes {
     /**
      * @notice provides account linked to a given address
      * @param _user address
-     * @return account details
+     * @return [<exists>,<username>,<description>,<server>,<balance>,<is_validator>]
      */
-    function users(address _user) external view returns (User memory);
+    function users(address _user) external view returns (bool, string memory, string memory, string memory, uint, bool);
 
     /**
      * @notice provides metadata of a given song
      * @dev does not provide the list of chunks or the list of distributors
      * @param _song identification value
-     * @return song details
+     * @return [<exists>,<author>,<name>,<price>,<length>,<duration>]
      */
-    function songs(bytes32 _song) external view returns (Song memory);
+    function songs(bytes32 _song) external view returns (bool, address, string memory, uint, uint, uint);
 
     /**
      * @notice provides metadata about a given distribution
      * @param _distribution identification value
-     * @return distribution details
+     * @return [<exists>,<index>,<fee>]
      */
-    function distributions(bytes32 _distribution) external view returns (Distribution memory);
+    function distributions(bytes32 _distribution) external view returns (bool, uint, uint);
 
     /**
      * @notice provides song identification value of a given index
