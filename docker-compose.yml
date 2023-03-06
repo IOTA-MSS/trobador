@@ -13,18 +13,10 @@ services:
   wasp:
     image: iotaledger/wasp:0.5.0-alpha.6
     stop_grace_period: 5m
-    build:
-      context: ../../
-      dockerfile: Dockerfile.noncached
-      args:
-        - BUILD_TAGS
-        - BUILD_LD_FLAGS
     command:
       - "--dashboard.auth.scheme=none"
       - "--webapi.auth.scheme=none"
       - "--inx.address=hornet-nest:9029"
-      - "--logger.level=debug"
-    container_name: wasp
     depends_on:
       - hornet-nest
     restart: on-failure:10
@@ -37,6 +29,18 @@ services:
       - "${HOST:-127.0.0.1}:9090:9090/tcp" # Wasp WebAPI
     volumes:
       - wasp-db:/waspdb
+  validator:
+    build:
+      context: ./webapp
+    depends_on:
+      - wasp
+    restart: on-failure:10
+    networks:
+      - wasp-net
+    ports:
+      - "${HOST:-127.0.0.1}:80:3000/tcp"
+      volumes:
+      - validator-wallet:/app/wallet
 
 networks:
   wasp-net: {}
@@ -44,3 +48,5 @@ networks:
 volumes:
   wasp-db:
     name: wasp-db
+  validator-wallet:
+    name: validator-wallet
