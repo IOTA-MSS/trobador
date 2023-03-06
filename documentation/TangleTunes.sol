@@ -171,12 +171,13 @@ interface TangleTunesI {
     function chunks_length(bytes32 _song) external view returns (uint);
 
     /**
-     * @notice pay author and distributor for a given chunk
+     * @notice pay author and distributor for a given amount of consecutive chunks
      * @param _song identification value
-     * @param _index of the chunk
+     * @param _index of the first chunk
+     * @param _amount of consecutive chunks
      * @param _distributor address
      */
-    function get_chunk(bytes32 _song, uint _index, address _distributor) external;
+    function get_chunks(bytes32 _song, uint _index, uint _amount, address _distributor) external;
 
     /**
      * @notice check authenticity of a given chunk

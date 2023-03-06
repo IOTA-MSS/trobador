@@ -196,19 +196,22 @@ contract TangleTunes is TangleTunesI {
         return songs[_song].chunks.length;
     }
 
-    function get_chunk(bytes32 _song, uint256 _index, address _distributor) external userExists {
-        //Compute distribution id
-        bytes32 _dist_id = gen_distribution_id(_song, msg.sender);
+    function get_chunks(bytes32 _song, uint256 _index, uint256 _amount, address _distributor) external userExists {
+        //Check distributor is valid,  and index is valid
+        bytes32 _dist_id = gen_distribution_id(_song, _distributor);
         Distribution storage dist_obj = distributions[_dist_id];
-        Song storage song_obj = songs[_song];
-
-        //Check that distribution is valid,  user has enough funds and index is valid
         require(dist_obj.exists, "Distributor is not currently active");
-        require(users[msg.sender].balance >= song_obj.price + dist_obj.fee, "User do not have enough funds");
-        require(_index < song_obj.chunks.length, "Index is out of bounds");
+
+        //Check indexes are valid
+        Song storage song_obj = songs[_song];
+        require(_index + _amount < song_obj.chunks.length, "Indexes out of bounds");
+
+        //Check user has enough funds
+        uint256 total_price = (song_obj.price + dist_obj.fee) * _amount;
+        require(users[msg.sender].balance >= total_price, "User do not have enough funds");
 
         // Distribute balance
-        users[msg.sender].balance -= song_obj.price + dist_obj.fee;
+        users[msg.sender].balance -= total_price;
         users[song_obj.author].balance += song_obj.price;
         users[_distributor].balance += dist_obj.fee;
     }
