@@ -212,8 +212,8 @@ contract TangleTunes is TangleTunesI {
 
         // Distribute balance
         users[msg.sender].balance -= total_price;
-        users[song_obj.author].balance += song_obj.price;
-        users[_distributor].balance += dist_obj.fee;
+        users[song_obj.author].balance += song_obj.price * _amount;
+        users[_distributor].balance += dist_obj.fee * _amount;
     }
 
     function check_chunk(bytes32 _song, uint256 _index, bytes32 _chunk) external view returns (bool) {
