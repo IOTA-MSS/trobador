@@ -1,22 +1,30 @@
 #!/bin/bash
 
-# go to wallet directory
+# Go to wallet directory
 cd /app/wallet
 
-# install wasp's command line wallet
-if ! test -f wasp-cli
+# Install wasp's command line wallet
+if ! command -v wasp-cli &> /dev/null
 then
     wget 'https://github.com/iotaledger/wasp/releases/download/v0.5.0-alpha.6/wasp-cli_0.5.0-alpha.6_Linux_x86_64.tar.gz'
     gunzip 'wasp-cli_0.5.0-alpha.6_Linux_x86_64.tar.gz'
     tar -xvf 'wasp-cli_0.5.0-alpha.6_Linux_x86_64.tar'
-    mv 'wasp-cli_0.5.0-alpha.6_Linux_x86_64/wasp-cli' .
+    mv 'wasp-cli_0.5.0-alpha.6_Linux_x86_64/wasp-cli' /usr/bin
     rm -r 'wasp-cli_0.5.0-alpha.6_Linux_x86_64' 'wasp-cli_0.5.0-alpha.6_Linux_x86_64.tar'
 fi
 
-# TODO: initialize wallet
+# Initialize wallet
+if ! wasp-cli address &> /dev/null
+then
+    wasp-cli init
+    wasp-cli set l1.apiaddress http://hornet-nest:14265
+    wasp-cli set l1.faucetaddress http://hornet-nest:8091
+    wasp-cli wasp add 0 http://wasp:9090
+fi
 
-# TODO: request funds
-
-# TODO: deploy chain
-
-# TODO: 
+# Deploy chain
+if ! wasp-cli chain info  --chain=tangletunes &> /dev/null
+then
+    wasp-cli request-funds
+    wasp-cli chain deploy --quorum=1 --chain=tangletunes --description="TangleTunes"
+fi

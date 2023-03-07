@@ -1,10 +1,34 @@
 const express = require('express');
+const fs = require('fs');
+
 const { ethers } = require('ethers');
+const { execSync } = require('child_process');
 
 const app = express();
-const provider = ethers.getDefaultProvider('http://127.0.0.1:9090/chains/tst1pqadsqpg4r3thmym3q68nmugy98h4u03re3yr6kcaxmwcedvw3wdv9rlqvz/evm'); // replace with your desired Ethereum network
+
+//Deploy chain
+execSync('sh /app/create-wallet.sh', 
+  (error, stdout, stderr) => {
+    console.log(stdout);
+    console.log(stderr);
+    if (error !== null) {
+      console.log(`exec error: ${error}`);
+    }
+  }
+);
+
+let chainID = JSON.parse(fs.readFileSync('/app/wallet/wasp-cli.json')).chains.tangletunes
+const provider = ethers.getDefaultProvider(`http://wasp:9090/chains/${chainID}/evm`);
 
 app.get('/', async (req, res) => {
+  res.json({
+    "json-rpc": `http://localhost:9090/chains/${chainID}/evm`,
+    "chainID": 1074,
+    "smart-contract": "TBD"
+  });
+});
+
+app.get('/history', async (req, res) => {
   const transactions = await provider.getBlock('latest').then(block => block.transactions);
   const txData = await Promise.all(transactions.map(async txHash => {
     const tx = await provider.getTransaction(txHash);

@@ -2,6 +2,7 @@ version: "3.9"
 services:
   hornet-nest:
     image: iotaledger/hornet-nest:2.0-rc
+    container_name: hornet-nest
     stop_grace_period: 5m
     networks:
       - wasp-net
@@ -12,6 +13,7 @@ services:
       - "${HOST:-127.0.0.1}:9029:9029/tcp"
   wasp:
     image: iotaledger/wasp:0.5.0-alpha.6
+    container_name: wasp
     stop_grace_period: 5m
     command:
       - "--dashboard.auth.scheme=none"
@@ -39,7 +41,7 @@ services:
       - wasp-net
     ports:
       - "${HOST:-127.0.0.1}:80:3000/tcp"
-      volumes:
+    volumes:
       - validator-wallet:/app/wallet
 
 networks:
