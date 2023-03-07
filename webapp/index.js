@@ -1,21 +1,35 @@
-const express = require('express');
-const fs = require('fs');
-
 const { ethers } = require('ethers');
 const { execSync } = require('child_process');
+const express = require('express');
+const http = require('http');
+const fs = require('fs');
 
-const app = express();
+function waitForWasp() {
+  return new Promise((resolve, reject) => {
+    http.get('http://wasp:7000/chains', async (res) => {
+      (res.statusCode === 200) ? resolve() : await waitForWasp()
+    }).on('error', (err) => {
+      reject(err.message)
+    }).end()
+  })
+}
 
-//Deploy chain
-execSync('sh /app/create-wallet.sh', 
-  (error, stdout, stderr) => {
+(async () => {
+  console.log('Waiting for server to start...')
+  await waitForWasp()
+})()
+
+//Deploy chain and smart contract
+execSync('/bin/bash /app/create-wallet.sh', 
+  (error, stdout, _) => {
     console.log(stdout);
-    console.log(stderr);
     if (error !== null) {
       console.log(`exec error: ${error}`);
     }
   }
 );
+
+const app = express();
 
 let chainID = JSON.parse(fs.readFileSync('/app/wallet/wasp-cli.json')).chains.tangletunes
 const provider = ethers.getDefaultProvider(`http://wasp:9090/chains/${chainID}/evm`);
