@@ -12,6 +12,9 @@ COPY package*.json .
 RUN npm install
 COPY . .
 
+# Fix potential windows line terminator error
+RUN sed -i 's/\r//g' scripts/*.sh
+
 # Run the web application
 EXPOSE 3000
 CMD ["node", "index.js"]

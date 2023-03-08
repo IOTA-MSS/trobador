@@ -20,7 +20,7 @@ function waitForWasp() {
 })()
 
 //Deploy chain and smart contract
-execSync('/bin/bash /app/create-wallet.sh', 
+execSync('/bin/bash /app/scripts/create-wallet.sh', 
   (error, stdout, _) => {
     console.log(stdout);
     if (error !== null) {
@@ -34,12 +34,25 @@ const app = express();
 let chainID = JSON.parse(fs.readFileSync('/app/wallet/wasp-cli.json')).chains.tangletunes
 const provider = ethers.getDefaultProvider(`http://wasp:9090/chains/${chainID}/evm`);
 
-app.get('/', async (req, res) => {
+app.get('/info', async (req, res) => {
   res.json({
     "json-rpc": `http://localhost:9090/chains/${chainID}/evm`,
     "chainID": 1074,
     "smart-contract": "TBD"
   });
+});
+
+app.get('/faucet/:addr', async (req, res) => {
+  let success = true
+  execSync(`/bin/bash /app/scripts/request-funds.sh ${req.params.addr}`, 
+    (error, stdout, _) => {
+      if (error !== null) {
+        console.log(`exec error: ${error}`);
+        success = false
+      }
+    }
+  );
+  res.json({"succes": success});
 });
 
 app.get('/history', async (req, res) => {
