@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-import "../documentation/TangleTunes.sol";
+import "./documentation/TangleTunes.sol";
 
 contract TangleTunes is TangleTunesI {
     address owner = msg.sender;
