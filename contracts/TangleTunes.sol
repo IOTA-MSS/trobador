@@ -50,6 +50,7 @@ contract TangleTunes is TangleTunesI {
         uint256 duration;
         bytes32[] chunks;
         address[] distributors; //TODO: sorted data structure
+        //TODO: validator address (after MVP Optional)
     }
 
     struct Distribution {
@@ -65,7 +66,7 @@ contract TangleTunes is TangleTunesI {
 
     function get_songs(uint256 _index, uint256 _amount) external view returns (Song_listing[] memory) {
         //Check all indexes are valid
-        require(_index + _amount < song_list.length, "Indexes out of bounds");
+        require(_index + _amount <= song_list.length, "Indexes out of bounds");
 
         Song_listing[] memory lst = new Song_listing[](_amount);
         for (uint256 i = 0; i < _amount; i++) {
@@ -129,6 +130,9 @@ contract TangleTunes is TangleTunesI {
         payable(msg.sender).transfer(amount);
     }
 
+    //TODO: get author address from signature instead
+    //TODO: change upload system to use: <name>, <price>, <length>, <duration>, <chunks>, <nonce>, <signature>
+    //TODO: so that song info cannot be tampered with (plus nonce from song_list.length to avoid reuse of request)
     function upload_song(address _author, string memory _name, uint _price, uint _length, uint _duration, bytes32[] memory _chunks) external onlyValidator {
         require(users[_author].exists, "Author is not a valid user");
         
@@ -168,28 +172,43 @@ contract TangleTunes is TangleTunesI {
     function distribute(bytes32 _song, uint256 _fee) external songExists(_song) userExists {
         //Compute distribution id
         bytes32 _dist_id = gen_distribution_id(_song, msg.sender);
-        address[] storage song_dists = songs[_song].distributors;
 
         //Store distribution object and list distributor of song
+        address[] storage song_dists = songs[_song].distributors;
         distributions[_dist_id] = Distribution(true, song_dists.length, _fee);
         song_dists.push(msg.sender);
+    }
+
+    function edit_fee(bytes32 _song, uint256 _fee) external {
+        //Compute distribution id
+        bytes32 _dist_id = gen_distribution_id(_song, msg.sender);
+        require(distributions[_dist_id].exists, "Song is not being distributed");
+
+        //Change distribution fee
+        distributions[_dist_id].fee = _fee;
     }
 
     function undistribute(bytes32 _song) external {
         //Compute distribution id
         bytes32 _dist_id = gen_distribution_id(_song, msg.sender);
+        require(distributions[_dist_id].exists, "Song is not being distributed");
 
         //Unlist from song distribution and delete object
-        //TODO: switch with last one in the last
+        //TODO: remove from distributors list without leaving empty space
         delete songs[_song].distributors[distributions[_dist_id].index];
         delete distributions[_dist_id];
     }
     
     //TODO: provide based on distribution fee and/or staking value (+ some randomness)
-    function get_rand_distributor(bytes32 _song) external view returns (address){
+    //TODO: add _amount argument
+    function get_rand_distributor(bytes32 _song) external view returns (address, string memory){
+        //Get random distributor index
         address[] storage song_dists = songs[_song].distributors;
-        uint256 _rand = uint(keccak256(abi.encodePacked(block.timestamp, msg.sender))) % (song_dists.length-1);
-        return song_dists[_rand+1];
+        uint256 _rand = uint(keccak256(abi.encodePacked(block.timestamp, msg.sender))) % (song_dists.length);
+        
+        // return address and server information
+        address _distributor = song_dists[_rand];
+        return (_distributor, users[_distributor].server);
     }
 
     function chunks_length(bytes32 _song) external view returns (uint) {
@@ -204,7 +223,7 @@ contract TangleTunes is TangleTunesI {
 
         //Check indexes are valid
         Song storage song_obj = songs[_song];
-        require(_index + _amount < song_obj.chunks.length, "Indexes out of bounds");
+        require(_index + _amount <= song_obj.chunks.length, "Indexes out of bounds");
 
         //Check user has enough funds
         uint256 total_price = (song_obj.price + dist_obj.fee) * _amount;
@@ -218,5 +237,18 @@ contract TangleTunes is TangleTunesI {
 
     function check_chunk(bytes32 _song, uint256 _index, bytes32 _chunk) external view returns (bool) {
         return songs[_song].chunks[_index] == _chunk;
+    }
+
+    function check_chunks(bytes32 _song, uint256 _index, uint256 _amount) external view returns (bytes32[] memory) {
+        //Check indexes are valid
+        bytes32[] storage song_chunks = songs[_song].chunks;
+        require(_index + _amount <= song_chunks.length, "Indexes out of bounds");
+
+        //return requested chunks
+        bytes32[] memory _chunks = new bytes32[](_amount);
+        for (uint256 i = 0; i < _amount; i++) {
+            _chunks[i] = song_chunks[_index + i];
+        }
+        return _chunks;
     }
 }

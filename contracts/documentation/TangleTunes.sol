@@ -149,19 +149,26 @@ interface TangleTunesI {
     function distribute(bytes32 _song, uint _fee) external;
 
     /**
+     * @notice changes the distribution fee on a given song
+     * @param _song identification value
+     * @param _fee per chunk
+     */
+    function edit_fee(bytes32 _song, uint _fee) external;
+
+    /**
      * @notice unlist for distribution on a given song
      * @param _song identification value
      */
     function undistribute(bytes32 _song) external;
 
     /**
-     * TODO: provide based on distribution fee and/or staking value (+ some randomness)
      * @notice provides a random distributor for a given song
      * @param _song identification value
-     * @return the address of an account listed as distributor of the given song
+     * @return the address of a distributor of the given song and its server information
      */
-    function get_rand_distributor(bytes32 _song) external view returns (address);
-    // get_distributor(bytes32 _song, uint index, uint region) external view returns (address[]);
+    function get_rand_distributor(bytes32 _song) external view returns (address, string memory);
+    //TODO: provide based on distribution fee and/or staking value (+ some randomness)
+    //TODO: get_distributor(bytes32 _song, uint _amount, uint _region) external view returns (address[]);
 
     /**
      * @notice provides the amount of chunks in a given song
@@ -187,4 +194,13 @@ interface TangleTunesI {
      * @return true if the data received is authentic, false otherwise
      */
     function check_chunk(bytes32 _song, uint _index, bytes32 _chunk) external view returns (bool);
+
+    /**
+     * @notice provides a given amount of chunks to locally check their authenticity
+     * @param _song identification value
+     * @param _index of the chunk
+     * @param _amount keccak hash value of the data
+     * @return list of requested chunks from a given song
+     */
+    function check_chunks(bytes32 _song, uint _index, uint _amount) external view returns (bytes32[] memory);
 }
