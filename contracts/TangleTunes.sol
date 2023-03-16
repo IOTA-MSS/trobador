@@ -5,7 +5,6 @@ import "./documentation/TangleTunes.sol";
 
 contract TangleTunes is TangleTunesI {
     address owner = msg.sender;
-
     mapping(address => User) public users;
     mapping(bytes32 => Song) public songs;
     mapping(bytes32 => Distribution) public distributions;
@@ -29,35 +28,6 @@ contract TangleTunes is TangleTunesI {
     modifier onlyValidator() {
         require(users[msg.sender].is_validator, "Only validators are allowed");
         _;
-    }
-
-    struct User {
-        bool exists;
-        string username;
-        string description;
-        string server; // TODO: separate into ip, port, public key
-        uint256 balance;
-        bool is_validator;
-        // TODO: song list (after MVP Optional)
-    }
-
-    struct Song {
-        bool exists;
-        address author;
-        string name;
-        uint256 price;
-        uint256 length;
-        uint256 duration;
-        bytes32[] chunks;
-        address[] distributors; //TODO: sorted data structure
-        //TODO: validator address (after MVP Optional)
-    }
-
-    struct Distribution {
-        bool exists;
-        uint256 index;
-        uint256 fee;
-        //TODO: Staking value (after MVP)
     }
 
     function song_list_length() external view returns (uint256) {
@@ -118,7 +88,6 @@ contract TangleTunes is TangleTunesI {
         users[msg.sender].balance += msg.value;
     }
 
-    
     function withdraw(uint _amount, L1Address memory _target) external {
         //TODO: implement
     }
@@ -202,12 +171,16 @@ contract TangleTunes is TangleTunesI {
     //TODO: provide based on distribution fee and/or staking value (+ some randomness)
     //TODO: add _amount argument
     function get_rand_distributor(bytes32 _song) external view returns (address, string memory){
-        //Get random distributor index
+        //TODO: Get random distributor index
+        //uint256 _rand = uint(keccak256(abi.encodePacked(block.timestamp, msg.sender))) % song_dists.length;
+
         address[] storage song_dists = songs[_song].distributors;
-        uint256 _rand = uint(keccak256(abi.encodePacked(block.timestamp, msg.sender))) % (song_dists.length);
+        address _distributor = address(0);
+        for (uint256 i = 0; i < song_dists.length && _distributor == address(0); i++) {
+            _distributor = song_dists[i];
+        }
         
         // return address and server information
-        address _distributor = song_dists[_rand];
         return (_distributor, users[_distributor].server);
     }
 

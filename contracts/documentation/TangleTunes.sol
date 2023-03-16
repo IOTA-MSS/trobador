@@ -9,6 +9,35 @@ import "../evm-library/ISCTypes.sol";
  */
 interface TangleTunesI {
 
+    struct User {
+        bool exists;
+        string username;
+        string description;
+        string server; // TODO: separate into ip, port, public key
+        uint256 balance;
+        bool is_validator;
+        // TODO: song list (after MVP Optional)
+    }
+
+    struct Song {
+        bool exists;
+        address author;
+        string name;
+        uint256 price;
+        uint256 length;
+        uint256 duration;
+        bytes32[] chunks;
+        address[] distributors; //TODO: sorted data structure
+        //TODO: validator address (after MVP Optional)
+    }
+
+    struct Distribution {
+        bool exists;
+        uint256 index;
+        uint256 fee;
+        //TODO: Staking value (after MVP)
+    }
+
     struct Song_listing {
         bytes32 song_id;
         string song_name;
