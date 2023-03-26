@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 import "./documentation/TangleTunes.sol";
 
 contract TangleTunes is TangleTunesI {
-    address owner = msg.sender;
+    address public owner = msg.sender;
     mapping(address => User) public users;
     mapping(bytes32 => Song) public songs;
     mapping(bytes32 => Distribution) public distributions;
@@ -34,13 +34,13 @@ contract TangleTunes is TangleTunesI {
         return song_list.length;
     }
 
-    function get_songs(uint256 _index, uint256 _amount) external view returns (Song_listing[] memory) {
+    function get_songs_from_list(bytes32[] memory _list, uint256 _index, uint256 _amount) internal view returns (Song_listing[] memory) {
         //Check all indexes are valid
-        require(_index + _amount <= song_list.length, "Indexes out of bounds");
+        require(_index + _amount <= _list.length, "Indexes out of bounds");
 
         Song_listing[] memory lst = new Song_listing[](_amount);
         for (uint256 i = 0; i < _amount; i++) {
-            bytes32 song_id = song_list[_index + i];
+            bytes32 song_id = _list[_index + i];
 
             //Only add information if song is still available (Could have been removed)
             if (song_id != bytes32(0)) {
@@ -60,6 +60,14 @@ contract TangleTunes is TangleTunesI {
         return lst;
     }
 
+    function get_songs(uint256 _index, uint256 _amount) external view returns (Song_listing[] memory) {
+        return get_songs_from_list(song_list, _index, _amount);
+    }
+
+    function get_user_songs(address _user, uint _index, uint _amount) external view returns (Song_listing[] memory) {
+        return get_songs_from_list(users[_user].song_list, _index, _amount);
+    }
+
     function manage_validators(address _validator) external onlyOwner {
         require(users[_validator].exists, "Validator is not a valid user");
         users[_validator].is_validator = !users[_validator].is_validator;
@@ -67,7 +75,21 @@ contract TangleTunes is TangleTunesI {
 
     function create_user(string memory _name, string memory _desc) external {
         require(!users[msg.sender].exists, "User already exists");
-        users[msg.sender] = User(true, _name, _desc, "", 0, false);
+        
+        User memory user_object;
+        user_object.exists = true;
+        user_object.username = _name;
+        user_object.description = _desc;
+
+        users[msg.sender] = user_object;
+    }
+
+    function get_user_nonce(address _user) external view returns (uint256) {
+        return users[_user].song_list.length;
+    }
+
+    function get_user_song_list(address _user, uint256 _index) external view returns (bytes32) {
+        return users[_user].song_list[_index];
     }
 
     function delete_user() external userExists {
@@ -99,12 +121,22 @@ contract TangleTunes is TangleTunesI {
         payable(msg.sender).transfer(amount);
     }
 
-    //TODO: get author address from signature instead
-    //TODO: change upload system to use: <name>, <price>, <length>, <duration>, <chunks>, <nonce>, <signature>
-    //TODO: so that song info cannot be tampered with (plus nonce from song_list.length to avoid reuse of request)
-    function upload_song(address _author, string memory _name, uint _price, uint _length, uint _duration, bytes32[] memory _chunks) external onlyValidator {
+    function upload_song(
+        address _author, 
+        string memory _name, 
+        uint256 _price, 
+        uint256 _length, 
+        uint256 _duration, 
+        bytes32[] memory _chunks,
+        uint256 _nonce,
+        bytes memory _signature
+    ) external onlyValidator {
+        //Get rightholder from signed parameters
+        bytes32 _msgHash = keccak256(abi.encodePacked(_author, _name, _price, _length, _duration, _chunks, _nonce));
+        address _rightholder = recoverSigner(_msgHash, _signature);
+        require(users[_rightholder].exists, "Rightholder is not a valid user");
         require(users[_author].exists, "Author is not a valid user");
-        
+
         //Compute song id
         bytes32 _song = gen_song_id(_name, _author);
         require(!songs[_song].exists, "Song is already uploaded");
@@ -113,6 +145,8 @@ contract TangleTunes is TangleTunesI {
         Song memory song_obj;
         song_obj.exists = true;
         song_obj.author = _author;
+        song_obj.rightholder = _rightholder;
+        song_obj.validator = msg.sender;
         song_obj.name = _name;
         song_obj.price = _price;
         song_obj.length = _length;
@@ -120,8 +154,26 @@ contract TangleTunes is TangleTunesI {
         song_obj.chunks = _chunks;
         songs[_song] = song_obj;
 
-        //Add song id to list
+        //Add song id to lists
         song_list.push(_song);
+        users[_author].song_list.push(_song);
+
+    }
+
+    //https://solidity-by-example.org/signature/
+    function recoverSigner(bytes32 _messageHash, bytes memory _signature) internal pure returns (address) {
+        bytes32 _ethMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", _messageHash));
+        (bytes32 r, bytes32 s, uint8 v) = splitSignature(_signature);
+        return ecrecover(_ethMessageHash, v, r, s);
+    }
+
+    function splitSignature(bytes memory sig) internal pure returns (bytes32 r, bytes32 s, uint8 v) {
+        require(sig.length == 65, "invalid signature length");
+        assembly {
+            r := mload(add(sig, 32))
+            s := mload(add(sig, 64))
+            v := byte(0, mload(add(sig, 96)))
+        }
     }
 
     function gen_song_id(string memory _name, address _author) public pure returns (bytes32) {
@@ -132,6 +184,10 @@ contract TangleTunes is TangleTunesI {
         Song storage song_obj = songs[_song];
         require(msg.sender == song_obj.author, "Only author is allowed");
         song_obj.price = _price;
+    }
+
+    function delete_song(bytes32 _song) external {
+        //TODO: implement
     }
 
     function gen_distribution_id(bytes32 _song, address _distributor) public pure returns (bytes32) {

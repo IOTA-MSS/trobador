@@ -16,12 +16,14 @@ interface TangleTunesI {
         string server; // TODO: separate into ip, port, public key
         uint256 balance;
         bool is_validator;
-        // TODO: song list (after MVP Optional)
+        bytes32[] song_list;
     }
 
     struct Song {
         bool exists;
         address author;
+        address rightholder;
+        address validator;
         string name;
         uint256 price;
         uint256 length;
@@ -48,6 +50,12 @@ interface TangleTunesI {
     }
 
     /**
+     * @notice provides deployer's address
+     * @return deployer's address
+     */
+    function owner() external view returns (address);
+
+    /**
      * @notice provides the amount of songs available
      * @return amount of songs
      */
@@ -69,13 +77,22 @@ interface TangleTunesI {
      */
     function users(address _user) external view returns (bool, string memory, string memory, string memory, uint, bool);
 
+    //TODO
+    function get_user_nonce(address _user) external view returns (uint);
+
+    //TODO
+    function get_user_songs(address _user, uint _index, uint _amount) external view returns (Song_listing[] memory);
+
+    //TODO
+    function get_user_song_list(address _user, uint _index) external view returns (bytes32);
+
     /**
      * @notice provides metadata of a given song
      * @dev does not provide the list of chunks or the list of distributors
      * @param _song identification value
-     * @return [<exists>,<author>,<name>,<price>,<length>,<duration>]
+     * @return [<exists>,<author>,<rightholder>,<validator>,<name>,<price>,<length>,<duration>]
      */
-    function songs(bytes32 _song) external view returns (bool, address, string memory, uint, uint, uint);
+    function songs(bytes32 _song) external view returns (bool, address, address, address, string memory, uint, uint, uint);
 
     /**
      * @notice provides metadata about a given distribution
@@ -144,8 +161,13 @@ interface TangleTunesI {
      * @param _length of the file in bytes
      * @param _duration of the song in seconds
      * @param _chunks list of the keccak hash value of each chunk
+     * @param _nonce for uploaded songs of author
+     * @param _signature hashed value of all previous parameters signed by the rightholder
      */
-    function upload_song(address _author, string memory _name, uint _price, uint _length, uint _duration, bytes32[] memory _chunks) external;
+    function upload_song(address _author, string memory _name, uint _price, uint _length, uint _duration, bytes32[] memory _chunks, uint _nonce, bytes memory _signature) external;
+
+    //TODO:
+    function delete_song(bytes32 _song) external;
 
     /**
      * @notice generates the identification value of a song
