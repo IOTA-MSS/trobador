@@ -25,11 +25,6 @@ contract TangleTunes is TangleTunesI {
         _;
     }
 
-    modifier onlyValidator() {
-        require(users[msg.sender].is_validator, "Only validators are allowed");
-        _;
-    }
-
     function song_list_length() external view returns (uint256) {
         return song_list.length;
     }
@@ -64,13 +59,29 @@ contract TangleTunes is TangleTunesI {
         return get_songs_from_list(song_list, _index, _amount);
     }
 
-    function get_user_songs(address _user, uint _index, uint _amount) external view returns (Song_listing[] memory) {
-        return get_songs_from_list(users[_user].song_list, _index, _amount);
+    function get_author_of_songs(address _user, uint _index, uint _amount) external view returns (Song_listing[] memory) {
+        return get_songs_from_list(users[_user].author_of, _index, _amount);
+    }
+
+    function get_holds_rights_to_songs(address _user, uint _index, uint _amount) external view returns (Song_listing[] memory) {
+        return get_songs_from_list(users[_user].holds_rights_to, _index, _amount);
+    }
+
+    function get_validates_songs(address _user, uint _index, uint _amount) external view returns (Song_listing[] memory) {
+        return get_songs_from_list(users[_user].validates, _index, _amount);
     }
 
     function manage_validators(address _validator) external onlyOwner {
-        require(users[_validator].exists, "Validator is not a valid user");
-        users[_validator].is_validator = !users[_validator].is_validator;
+        User storage validator = users[_validator];
+        require(validator.exists, "Validator is not a valid user");
+
+        //remove all validated songs
+        if (validator.is_validator) {
+            delete_all_songs_in_list(validator.validates);
+        }
+
+        //switch validator status
+        validator.is_validator = !validator.is_validator;
     }
 
     function create_user(string memory _name, string memory _desc) external {
@@ -84,16 +95,44 @@ contract TangleTunes is TangleTunesI {
         users[msg.sender] = user_object;
     }
 
-    function get_user_nonce(address _user) external view returns (uint256) {
-        return users[_user].song_list.length;
+    function get_author_of_length(address _user) external view returns (uint256) {
+        return users[_user].author_of.length;
     }
 
-    function get_user_song_list(address _user, uint256 _index) external view returns (bytes32) {
-        return users[_user].song_list[_index];
+    function get_author_of_song_id(address _user, uint256 _index) external view returns (bytes32) {
+        return users[_user].author_of[_index];
+    }
+
+    function get_holds_rights_to_length(address _user) external view returns (uint256) {
+        return users[_user].holds_rights_to.length;
+    }
+
+    function get_holds_rights_to_song_id(address _user, uint256 _index) external view returns (bytes32) {
+        return users[_user].holds_rights_to[_index];
+    }
+
+    function get_validates_length(address _user) external view returns (uint256) {
+        return users[_user].validates.length;
+    }
+
+    function get_validates_song_id(address _user, uint256 _index) external view returns (bytes32) {
+        return users[_user].validates[_index];
+    }
+
+    function delete_all_songs_in_list(bytes32[] storage _list) internal {
+        for (uint256 i = 0; i < _list.length; i++) {
+            delete songs[_list[i]];
+        }
     }
 
     function delete_user() external userExists {
-        //TODO: remove songs linked to this user
+        User storage user = users[msg.sender];
+
+        //remove all songs with involvement
+        delete_all_songs_in_list(user.author_of);
+        delete_all_songs_in_list(user.holds_rights_to);
+        delete_all_songs_in_list(user.validates);
+
         delete users[msg.sender];
     }
 
@@ -130,7 +169,9 @@ contract TangleTunes is TangleTunesI {
         bytes32[] memory _chunks,
         uint256 _nonce,
         bytes memory _signature
-    ) external onlyValidator {
+    ) external  {
+        require(users[msg.sender].is_validator, "Only validators are allowed");
+
         //Get rightholder from signed parameters
         bytes32 _msgHash = keccak256(abi.encodePacked(_author, _name, _price, _length, _duration, _chunks, _nonce));
         address _rightholder = recoverSigner(_msgHash, _signature);
@@ -156,8 +197,9 @@ contract TangleTunes is TangleTunesI {
 
         //Add song id to lists
         song_list.push(_song);
-        users[_author].song_list.push(_song);
-
+        users[_author].author_of.push(_song);
+        users[_rightholder].holds_rights_to.push(_song);
+        users[msg.sender].validates.push(_song);
     }
 
     //https://solidity-by-example.org/signature/
@@ -182,12 +224,14 @@ contract TangleTunes is TangleTunesI {
 
     function edit_price(bytes32 _song, uint256 _price) external songExists(_song) {
         Song storage song_obj = songs[_song];
-        require(msg.sender == song_obj.author, "Only author is allowed");
+        require(msg.sender == song_obj.author || msg.sender == song_obj.rightholder, "Only Author & Rightholder are allowed");
         song_obj.price = _price;
     }
 
-    function delete_song(bytes32 _song) external {
-        //TODO: implement
+    function delete_song(bytes32 _song) external songExists(_song) {
+        Song storage song_obj = songs[_song];
+        require(msg.sender == song_obj.author || msg.sender == song_obj.rightholder || msg.sender == song_obj.validator, "Only Validator & Author & Rightholder are allowed");
+        delete songs[_song];
     }
 
     function gen_distribution_id(bytes32 _song, address _distributor) public pure returns (bytes32) {

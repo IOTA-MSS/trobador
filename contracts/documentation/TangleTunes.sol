@@ -16,7 +16,9 @@ interface TangleTunesI {
         string server; // TODO: separate into ip, port, public key
         uint256 balance;
         bool is_validator;
-        bytes32[] song_list;
+        bytes32[] author_of;
+        bytes32[] holds_rights_to;
+        bytes32[] validates;
     }
 
     struct Song {
@@ -78,13 +80,31 @@ interface TangleTunesI {
     function users(address _user) external view returns (bool, string memory, string memory, string memory, uint, bool);
 
     //TODO
-    function get_user_nonce(address _user) external view returns (uint);
+    function get_author_of_length(address _user) external view returns (uint);
 
     //TODO
-    function get_user_songs(address _user, uint _index, uint _amount) external view returns (Song_listing[] memory);
+    function get_author_of_songs(address _user, uint _index, uint _amount) external view returns (Song_listing[] memory);
 
     //TODO
-    function get_user_song_list(address _user, uint _index) external view returns (bytes32);
+    function get_author_of_song_id(address _user, uint _index) external view returns (bytes32);
+
+    //TODO
+    function get_holds_rights_to_length(address _user) external view returns (uint);
+
+    //TODO
+    function get_holds_rights_to_songs(address _user, uint _index, uint _amount) external view returns (Song_listing[] memory);
+
+    //TODO
+    function get_holds_rights_to_song_id(address _user, uint _index) external view returns (bytes32);
+
+    //TODO
+    function get_validates_length(address _user) external view returns (uint);
+
+    //TODO
+    function get_validates_songs(address _user, uint _index, uint _amount) external view returns (Song_listing[] memory);
+
+    //TODO
+    function get_validates_song_id(address _user, uint _index) external view returns (bytes32);
 
     /**
      * @notice provides metadata of a given song
