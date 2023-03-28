@@ -62,4 +62,48 @@ describe("Account Management", function () {
         const { exists } = await contract.users(addr1.address)
         expect(exists).to.equal(false);
     });
+
+    it("User Should be able to deposit", async function () {
+        const { contract, addr1 } = await loadFixture(deployedContractFixture)
+        //cannot delete account without account
+        await expect(contract.connect(addr1).deposit({ value: ethers.utils.parseEther("1") }))
+            .to.be.revertedWith('User do not exist');
+
+        await contract.connect(addr1).create_user("Tester", "Desc");
+        await contract.connect(addr1).deposit({ value: ethers.utils.parseEther("1") })
+        
+        const { balance } = await contract.users(addr1.address)
+        expect(balance).to.equal(ethers.utils.parseEther("1"));
+    });
+
+    it("User Should be able to withdraw to chain", async function () {
+        const { contract, addr1 } = await loadFixture(deployedContractFixture)
+        await contract.connect(addr1).create_user("Tester", "Desc");
+        await contract.connect(addr1).deposit({ value: ethers.utils.parseEther("1") })
+
+        const chain_balance = await hre.ethers.provider.getBalance(addr1.address)
+        const account_balance = (await contract.users(addr1.address)).balance
+        const tx = await contract.connect(addr1).withdraw_to_chain(account_balance)
+        const receipt = await tx.wait()
+        const gasUsed = BigInt(receipt.cumulativeGasUsed) * BigInt(receipt.effectiveGasPrice);
+
+        expect(await hre.ethers.provider.getBalance(addr1.address)).to.equal(chain_balance.add(account_balance).sub(gasUsed))
+        expect((await contract.users(addr1.address)).balance).to.equal(0)
+    });
+
+    it("User Should be able to withdraw to tangle", async function () {
+        const { contract, addr1 } = await loadFixture(deployedContractFixture)
+        await contract.connect(addr1).create_user("Tester", "Desc");
+        await contract.connect(addr1).deposit({ value: ethers.utils.parseEther("1") })
+
+        const chain_balance = await hre.ethers.provider.getBalance(addr1.address)
+        const account_balance = (await contract.users(addr1.address)).balance
+        //TODO: add random l1Address
+        const tx = await contract.connect(addr1).withdraw_to_tangle(account_balance)
+        const receipt = await tx.wait()
+        const gasUsed = BigInt(receipt.cumulativeGasUsed) * BigInt(receipt.effectiveGasPrice);
+
+        expect(await hre.ethers.provider.getBalance(addr1.address)).to.equal(chain_balance.sub(gasUsed))
+        expect((await contract.users(addr1.address)).balance).to.equal(0)
+    });
 });

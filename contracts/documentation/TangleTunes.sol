@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-import "../evm-library/ISCTypes.sol";
+import "../evm-library/ISC.sol";
 
 /**
  * @title TangleTunes: backend logic for a P2P music streaming application
@@ -166,12 +166,15 @@ interface TangleTunesI {
      */
     function deposit() external payable;
 
+    //TODO
+    function withdraw_to_chain(uint _amount) external;
+
     /**
      * @notice sends account's balance to a given address in the L1 ledger
      * @param _amount to be withdrawn
      * @param _target address in the L1 ledger
      */
-    function withdraw(uint _amount, L1Address memory _target) external;
+    function withdraw_to_tangle(uint64 _amount, L1Address memory _target) external;
 
     /**
      * @notice uploads song's metadata to the platform
@@ -256,15 +259,6 @@ interface TangleTunesI {
      * @param _distributor address
      */
     function get_chunks(bytes32 _song, uint _index, uint _amount, address _distributor) external;
-
-    /**
-     * @notice check authenticity of a given chunk
-     * @param _song identification value
-     * @param _index of the chunk
-     * @param _chunk keccak hash value of the data
-     * @return true if the data received is authentic, false otherwise
-     */
-    function check_chunk(bytes32 _song, uint _index, bytes32 _chunk) external view returns (bool);
 
     /**
      * @notice provides a given amount of chunks to locally check their authenticity

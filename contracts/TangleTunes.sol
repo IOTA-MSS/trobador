@@ -3,6 +3,7 @@ pragma solidity ^0.8.9;
 
 import "./documentation/TangleTunes.sol";
 
+
 contract TangleTunes is TangleTunesI {
     address public owner = msg.sender;
     mapping(address => User) public users;
@@ -127,6 +128,7 @@ contract TangleTunes is TangleTunesI {
 
     function delete_user() external userExists {
         User storage user = users[msg.sender];
+        require(user.balance == 0, "Can't delete account with balance");
 
         //remove all songs with involvement
         delete_all_songs_in_list(user.author_of);
@@ -149,15 +151,24 @@ contract TangleTunes is TangleTunesI {
         users[msg.sender].balance += msg.value;
     }
 
-    function withdraw(uint _amount, L1Address memory _target) external {
-        //TODO: implement
+    function withdraw_to_chain(uint256 _amount) external userExists {
+        User storage user = users[msg.sender];
+        require(user.balance >= _amount, "User do not have the demanded balance");
+        user.balance -= _amount;
+        payable(msg.sender).transfer(_amount);
     }
 
-    function withdraw(uint256 amount) external userExists {
-        uint256 balance = users[msg.sender].balance;
-        require(balance >= amount, "User do not have the demanded balance");
-        users[msg.sender].balance -= amount;
-        payable(msg.sender).transfer(amount);
+    function withdraw_to_tangle(uint64 _amount, L1Address memory _target) external userExists {
+        User storage user = users[msg.sender];
+        require(user.balance >= _amount, "User do not have the demanded balance");
+
+        ISCSendMetadata memory metadata;
+        ISCSendOptions memory options;
+        ISCAssets memory assets;
+        assets.baseTokens = _amount;
+        //ISC.sandbox.send(_target, assets, false, metadata, options);
+
+        payable(msg.sender).transfer(_amount);
     }
 
     function upload_song(
@@ -169,7 +180,7 @@ contract TangleTunes is TangleTunesI {
         bytes32[] memory _chunks,
         uint256 _nonce,
         bytes memory _signature
-    ) external  {
+    ) external {
         require(users[msg.sender].is_validator, "Only validators are allowed");
 
         //Get rightholder from signed parameters
@@ -248,7 +259,7 @@ contract TangleTunes is TangleTunesI {
         song_dists.push(msg.sender);
     }
 
-    function edit_fee(bytes32 _song, uint256 _fee) external {
+    function edit_fee(bytes32 _song, uint256 _fee) external songExists(_song) {
         //Compute distribution id
         bytes32 _dist_id = gen_distribution_id(_song, msg.sender);
         require(distributions[_dist_id].exists, "Song is not being distributed");
@@ -257,7 +268,7 @@ contract TangleTunes is TangleTunesI {
         distributions[_dist_id].fee = _fee;
     }
 
-    function undistribute(bytes32 _song) external {
+    function undistribute(bytes32 _song) external songExists(_song) {
         //Compute distribution id
         bytes32 _dist_id = gen_distribution_id(_song, msg.sender);
         require(distributions[_dist_id].exists, "Song is not being distributed");
@@ -270,7 +281,7 @@ contract TangleTunes is TangleTunesI {
     
     //TODO: provide based on distribution fee and/or staking value (+ some randomness)
     //TODO: add _amount argument
-    function get_rand_distributor(bytes32 _song) external view returns (address, string memory){
+    function get_rand_distributor(bytes32 _song) external songExists(_song) view returns (address, string memory) {
         //TODO: Get random distributor index
         //uint256 _rand = uint(keccak256(abi.encodePacked(block.timestamp, msg.sender))) % song_dists.length;
 
@@ -284,11 +295,11 @@ contract TangleTunes is TangleTunesI {
         return (_distributor, users[_distributor].server);
     }
 
-    function chunks_length(bytes32 _song) external view returns (uint) {
+    function chunks_length(bytes32 _song) external songExists(_song) view returns (uint) {
         return songs[_song].chunks.length;
     }
 
-    function get_chunks(bytes32 _song, uint256 _index, uint256 _amount, address _distributor) external userExists {
+    function get_chunks(bytes32 _song, uint256 _index, uint256 _amount, address _distributor) external userExists songExists(_song) {
         //Check distributor is valid,  and index is valid
         bytes32 _dist_id = gen_distribution_id(_song, _distributor);
         Distribution storage dist_obj = distributions[_dist_id];
@@ -308,11 +319,7 @@ contract TangleTunes is TangleTunesI {
         users[_distributor].balance += dist_obj.fee * _amount;
     }
 
-    function check_chunk(bytes32 _song, uint256 _index, bytes32 _chunk) external view returns (bool) {
-        return songs[_song].chunks[_index] == _chunk;
-    }
-
-    function check_chunks(bytes32 _song, uint256 _index, uint256 _amount) external view returns (bytes32[] memory) {
+    function check_chunks(bytes32 _song, uint256 _index, uint256 _amount) external songExists(_song) view returns (bytes32[] memory) {
         //Check indexes are valid
         bytes32[] storage song_chunks = songs[_song].chunks;
         require(_index + _amount <= song_chunks.length, "Indexes out of bounds");
