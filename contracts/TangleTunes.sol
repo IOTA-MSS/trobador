@@ -166,7 +166,7 @@ contract TangleTunes is TangleTunesI {
         ISCSendOptions memory options;
         ISCAssets memory assets;
         assets.baseTokens = _amount;
-        //ISC.sandbox.send(_target, assets, false, metadata, options);
+        ISC.sandbox.send(_target, assets, false, metadata, options);
 
         payable(msg.sender).transfer(_amount);
     }
