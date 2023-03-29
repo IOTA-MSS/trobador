@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.17;
 
 import "./documentation/TangleTunes.sol";
 
@@ -10,6 +10,8 @@ contract TangleTunes is TangleTunesI {
     mapping(bytes32 => Song) public songs;
     mapping(bytes32 => Distribution) public distributions;
     bytes32[] public song_list;
+
+    address private END = address(1);
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Only owner is allowed");
@@ -30,7 +32,7 @@ contract TangleTunes is TangleTunesI {
         return song_list.length;
     }
 
-    function get_songs_from_list(bytes32[] memory _list, uint256 _index, uint256 _amount) internal view returns (Song_listing[] memory) {
+    function _get_songs_from_list(bytes32[] memory _list, uint256 _index, uint256 _amount) internal view returns (Song_listing[] memory) {
         //Check all indexes are valid
         require(_index + _amount <= _list.length, "Indexes out of bounds");
 
@@ -57,19 +59,19 @@ contract TangleTunes is TangleTunesI {
     }
 
     function get_songs(uint256 _index, uint256 _amount) external view returns (Song_listing[] memory) {
-        return get_songs_from_list(song_list, _index, _amount);
+        return _get_songs_from_list(song_list, _index, _amount);
     }
 
     function get_author_of_songs(address _user, uint _index, uint _amount) external view returns (Song_listing[] memory) {
-        return get_songs_from_list(users[_user].author_of, _index, _amount);
+        return _get_songs_from_list(users[_user].author_of, _index, _amount);
     }
 
     function get_holds_rights_to_songs(address _user, uint _index, uint _amount) external view returns (Song_listing[] memory) {
-        return get_songs_from_list(users[_user].holds_rights_to, _index, _amount);
+        return _get_songs_from_list(users[_user].holds_rights_to, _index, _amount);
     }
 
     function get_validates_songs(address _user, uint _index, uint _amount) external view returns (Song_listing[] memory) {
-        return get_songs_from_list(users[_user].validates, _index, _amount);
+        return _get_songs_from_list(users[_user].validates, _index, _amount);
     }
 
     function manage_validators(address _validator) external onlyOwner {
@@ -78,7 +80,7 @@ contract TangleTunes is TangleTunesI {
 
         //remove all validated songs
         if (validator.is_validator) {
-            delete_all_songs_in_list(validator.validates);
+            _delete_all_songs_in_list(validator.validates);
         }
 
         //switch validator status
@@ -88,12 +90,13 @@ contract TangleTunes is TangleTunesI {
     function create_user(string memory _name, string memory _desc) external {
         require(!users[msg.sender].exists, "User already exists");
         
-        User memory user_object;
-        user_object.exists = true;
-        user_object.username = _name;
-        user_object.description = _desc;
+        //Create and store user's object
+        User memory user_obj;
+        user_obj.exists = true;
+        user_obj.username = _name;
+        user_obj.description = _desc;
 
-        users[msg.sender] = user_object;
+        users[msg.sender] = user_obj;
     }
 
     function get_author_of_length(address _user) external view returns (uint256) {
@@ -120,7 +123,7 @@ contract TangleTunes is TangleTunesI {
         return users[_user].validates[_index];
     }
 
-    function delete_all_songs_in_list(bytes32[] storage _list) internal {
+    function _delete_all_songs_in_list(bytes32[] storage _list) internal {
         for (uint256 i = 0; i < _list.length; i++) {
             delete songs[_list[i]];
         }
@@ -131,9 +134,9 @@ contract TangleTunes is TangleTunesI {
         require(user.balance == 0, "Can't delete account with balance");
 
         //remove all songs with involvement
-        delete_all_songs_in_list(user.author_of);
-        delete_all_songs_in_list(user.holds_rights_to);
-        delete_all_songs_in_list(user.validates);
+        _delete_all_songs_in_list(user.author_of);
+        _delete_all_songs_in_list(user.holds_rights_to);
+        _delete_all_songs_in_list(user.validates);
 
         delete users[msg.sender];
     }
@@ -185,7 +188,7 @@ contract TangleTunes is TangleTunesI {
 
         //Get rightholder from signed parameters
         bytes32 _msgHash = keccak256(abi.encodePacked(_author, _name, _price, _length, _duration, _chunks, _nonce));
-        address _rightholder = recoverSigner(_msgHash, _signature);
+        address _rightholder = _recoverSigner(_msgHash, _signature);
         require(users[_rightholder].exists, "Rightholder is not a valid user");
         require(users[_author].exists, "Author is not a valid user");
 
@@ -193,7 +196,7 @@ contract TangleTunes is TangleTunesI {
         bytes32 _song = gen_song_id(_name, _author);
         require(!songs[_song].exists, "Song is already uploaded");
 
-        //Create and upload song's object
+        //Create and store song's object
         Song memory song_obj;
         song_obj.exists = true;
         song_obj.author = _author;
@@ -214,13 +217,13 @@ contract TangleTunes is TangleTunesI {
     }
 
     //https://solidity-by-example.org/signature/
-    function recoverSigner(bytes32 _messageHash, bytes memory _signature) internal pure returns (address) {
+    function _recoverSigner(bytes32 _messageHash, bytes memory _signature) internal pure returns (address) {
         bytes32 _ethMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", _messageHash));
-        (bytes32 r, bytes32 s, uint8 v) = splitSignature(_signature);
+        (bytes32 r, bytes32 s, uint8 v) = _splitSignature(_signature);
         return ecrecover(_ethMessageHash, v, r, s);
     }
 
-    function splitSignature(bytes memory sig) internal pure returns (bytes32 r, bytes32 s, uint8 v) {
+    function _splitSignature(bytes memory sig) internal pure returns (bytes32 r, bytes32 s, uint8 v) {
         require(sig.length == 65, "invalid signature length");
         assembly {
             r := mload(add(sig, 32))
@@ -249,50 +252,188 @@ contract TangleTunes is TangleTunesI {
         return keccak256(abi.encodePacked(_song, _distributor));
     }
 
-    function distribute(bytes32 _song, uint256 _fee) external songExists(_song) userExists {
+    function _distribute(bytes32 _song, uint256 _fee, address _index_addr) internal songExists(_song) userExists {
         //Compute distribution id
         bytes32 _dist_id = gen_distribution_id(_song, msg.sender);
+        bytes32 _index;
+        if (_index_addr == address(0)) {
+            _index = _song;
+        } else {
+            _index = gen_distribution_id(_song, _index_addr);
+        } 
 
-        //Store distribution object and list distributor of song
-        address[] storage song_dists = songs[_song].distributors;
-        distributions[_dist_id] = Distribution(true, song_dists.length, _fee);
-        song_dists.push(msg.sender);
+        //Update fee if already distributing
+        if (distributions[_dist_id].next_distributor != address(0)) {
+            //Check previous distributor
+            require(_get_next_dist_id(_song, _index) == _dist_id, "Incorrect index as previous distributor");
+
+            //Remove distributor from ordered list
+            _remove_distribution(_song, _dist_id, _index);
+        }
+
+        //Check index
+        address _next_dist_addr = distributions[_index].next_distributor;
+        require(_next_dist_addr != address(0), "Index is not distributing");
+        require(_verify_index(_song, _index, _fee), "Incorrect index");
+
+        //Insert distributor in ordered list
+        distributions[_dist_id] = Distribution(_fee, _next_dist_addr);
+        distributions[_index].next_distributor = msg.sender;
+
+        //Increase stored amount of song distributors
+        songs[_song].distributors += 1;
     }
 
-    function edit_fee(bytes32 _song, uint256 _fee) external songExists(_song) {
-        //Compute distribution id
-        bytes32 _dist_id = gen_distribution_id(_song, msg.sender);
-        require(distributions[_dist_id].exists, "Song is not being distributed");
-
-        //Change distribution fee
-        distributions[_dist_id].fee = _fee;
+    function distribute(bytes32[] memory _songs, uint256[] memory _fees, address[] memory _index_addresses) external {
+        require(_songs.length == _fees.length && _fees.length == _index_addresses.length, "Lists must be of same size");
+        for (uint256 i = 0; i < _songs.length; i++) {
+            _distribute(_songs[i], _fees[i], _index_addresses[i]);
+        }
     }
 
-    function undistribute(bytes32 _song) external songExists(_song) {
+    function _undistribute(bytes32 _song, address _index_addr) internal songExists(_song) {
         //Compute distribution id
         bytes32 _dist_id = gen_distribution_id(_song, msg.sender);
-        require(distributions[_dist_id].exists, "Song is not being distributed");
+        require(distributions[_dist_id].next_distributor != address(0), "Song is not being distributed");
 
-        //Unlist from song distribution and delete object
-        //TODO: remove from distributors list without leaving empty space
-        delete songs[_song].distributors[distributions[_dist_id].index];
+        //Check previous distributor
+        bytes32 _index;
+        if (_index_addr == address(0)) {
+            _index = _song;
+        } else {
+            _index = gen_distribution_id(_song, _index_addr);
+        } 
+        require(_get_next_dist_id(_song, _index) == _dist_id, "Incorrect previous distributor");
+
+        //Remove distributor from ordered list
+        _remove_distribution(_song, _dist_id, _index);
+    }
+
+    function undistribute(bytes32[] memory _songs, address[] memory _index_addresses) external {
+        require(_songs.length == _index_addresses.length, "Lists must be of same size");
+        for (uint256 i = 0; i < _songs.length; i++) {
+            _undistribute(_songs[i], _index_addresses[i]);
+        }
+    }
+
+    function _find_insert_index(bytes32 _song, uint256 _fee) internal songExists(_song) view returns (address) {
+        address _index_addr = address(0);
+        bytes32 _index = _song;
+
+        while(distributions[_index].next_distributor != END) {
+            if (_verify_index(_song, _index, _fee)) {
+                return _index_addr;
+            }
+            
+            _index_addr = distributions[_index].next_distributor;
+            _index = _get_next_dist_id(_song, _index);
+        }
+
+        return _index_addr;
+    }
+
+    function find_insert_indexes(bytes32[] memory _songs, uint256[] memory _fees) external view returns (address[] memory) {
+        require(_songs.length == _fees.length, "Lists must be of same size");
+
+        address[] memory insert_indexes = new address[](_songs.length);
+        for (uint256 i = 0; i < _songs.length; i++) {
+            insert_indexes[i] = _find_insert_index(_songs[i], _fees[i]);
+        }
+
+        return insert_indexes;
+    }
+
+    function _find_dist_index(bytes32 _song, address _dist_addr) internal songExists(_song) view returns (address) {
+        //Compute distribution id
+        bytes32 _dist_id = gen_distribution_id(_song, _dist_addr);
+        require(distributions[_dist_id].next_distributor != address(0), "Song is not being distributed");
+
+        address _index_addr = address(0);
+        bytes32 _index = _song;
+        while (distributions[_index].next_distributor != END) {
+            bytes32 _next_dist_id = _get_next_dist_id(_song, _index);
+            if (_next_dist_id == _dist_id) {
+                return _index_addr;
+            }
+            _index_addr = distributions[_index].next_distributor;
+            _index = _next_dist_id;
+        }
+
+        return address(0);
+    }
+
+    function find_dist_indexes(bytes32[] memory _songs, address[] memory _dist_addresses) external view returns (address[] memory) {
+        require(_songs.length == _dist_addresses.length, "Lists must be of same size");
+
+        address[] memory insert_indexes = new address[](_songs.length);
+        for (uint256 i = 0; i < _songs.length; i++) {
+            insert_indexes[i] = _find_dist_index(_songs[i], _dist_addresses[i]);
+        }
+
+        return insert_indexes;
+    }
+
+    function _get_next_dist_id(bytes32 _song, bytes32 _dist_id) internal view returns (bytes32) {
+        return gen_distribution_id(_song, distributions[_dist_id].next_distributor);
+    }
+
+    function _verify_index(bytes32 _song, bytes32 _index, uint256 _fee) internal view returns (bool) {
+        return (_index == _song || distributions[_index].fee < _fee) &&
+               (distributions[_index].next_distributor == END || distributions[_get_next_dist_id(_song, _index)].fee >= _fee);
+    }
+
+    function _remove_distribution(bytes32 _song, bytes32 _dist_id, bytes32 _index) internal {
+        distributions[_index].next_distributor = distributions[_dist_id].next_distributor;
         delete distributions[_dist_id];
+        songs[_song].distributors -= 1;
+    }
+
+    function get_distributors_length(bytes32 _song) external songExists(_song) view returns (uint256) {
+        return songs[_song].distributors;
+    }
+
+    function get_distributors(bytes32 _song, address _start, uint256 _amount) external songExists(_song) view returns (Distribution_listing[] memory) {
+        require(_amount > 0 && _amount <= songs[_song].distributors, "Indexes out of bounds");
+
+        //Compute distribution id
+        bytes32 _index;
+        address _dist_addr;
+        if (_start == address(0)) {
+            _index = _get_next_dist_id(_song, _song);
+            _dist_addr = distributions[_song].next_distributor;
+        } else {
+            _index = gen_distribution_id(_song, _start);
+            _dist_addr = _start;
+        }
+
+        Distribution_listing[] memory lst = new Distribution_listing[](_amount);
+        for (uint256 i = 0; i < _amount; i++) {
+            require(_index != _song, "Index out of bounds");
+
+            Distribution storage dist_obj = distributions[_index];
+            require(dist_obj.next_distributor != address(0), "Song is not being distributed");
+            lst[i] = Distribution_listing(_dist_addr, users[_dist_addr].server, dist_obj.fee);
+
+            _index = _get_next_dist_id(_song, _index);
+            _dist_addr = dist_obj.next_distributor;
+        }
+
+        return lst;
     }
     
-    //TODO: provide based on distribution fee and/or staking value (+ some randomness)
-    //TODO: add _amount argument
-    function get_rand_distributor(bytes32 _song) external songExists(_song) view returns (address, string memory) {
-        //TODO: Get random distributor index
-        //uint256 _rand = uint(keccak256(abi.encodePacked(block.timestamp, msg.sender))) % song_dists.length;
+    function get_rand_distributor(bytes32 _song, uint256 _seed) external songExists(_song) view returns (Distribution_listing memory) {
+        if (songs[_song].distributors == 0) return Distribution_listing(address(0), "", 0);
+        uint256 _rand = _seed % songs[_song].distributors;
 
-        address[] storage song_dists = songs[_song].distributors;
-        address _distributor = address(0);
-        for (uint256 i = 0; i < song_dists.length && _distributor == address(0); i++) {
-            _distributor = song_dists[i];
+        address _current_dist_addr = distributions[_song].next_distributor;
+        bytes32 _current_dist_id = _get_next_dist_id(_song, _song);
+        for (uint256 i = 0; i < _rand; i++) {
+            _current_dist_addr = distributions[_current_dist_id].next_distributor;
+            _current_dist_id = _get_next_dist_id(_song, _current_dist_id);
         }
         
         // return address and server information
-        return (_distributor, users[_distributor].server);
+        return Distribution_listing(_current_dist_addr, users[_current_dist_addr].server, distributions[_current_dist_id].fee);
     }
 
     function chunks_length(bytes32 _song) external songExists(_song) view returns (uint) {
@@ -303,7 +444,7 @@ contract TangleTunes is TangleTunesI {
         //Check distributor is valid,  and index is valid
         bytes32 _dist_id = gen_distribution_id(_song, _distributor);
         Distribution storage dist_obj = distributions[_dist_id];
-        require(dist_obj.exists, "Distributor is not currently active");
+        require(dist_obj.next_distributor != address(0), "Song is not being distributed");
 
         //Check indexes are valid
         Song storage song_obj = songs[_song];

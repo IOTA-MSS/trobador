@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.17;
 
 import "../evm-library/ISC.sol";
 
@@ -14,7 +14,7 @@ interface TangleTunesI {
         string username;
         string description;
         string server; // TODO: separate into ip, port, public key
-        uint256 balance;
+        uint balance;
         bool is_validator;
         bytes32[] author_of;
         bytes32[] holds_rights_to;
@@ -27,18 +27,16 @@ interface TangleTunesI {
         address rightholder;
         address validator;
         string name;
-        uint256 price;
-        uint256 length;
-        uint256 duration;
+        uint price;
+        uint length;
+        uint duration;
+        uint distributors;
         bytes32[] chunks;
-        address[] distributors; //TODO: sorted data structure
-        //TODO: validator address (after MVP Optional)
     }
 
     struct Distribution {
-        bool exists;
-        uint256 index;
-        uint256 fee;
+        uint fee;
+        address next_distributor;
         //TODO: Staking value (after MVP)
     }
 
@@ -51,6 +49,12 @@ interface TangleTunesI {
         uint duration;
     }
 
+    struct Distribution_listing {
+        address distributor;
+        string server;
+        uint fee;
+    }
+
     /**
      * @notice provides deployer's address
      * @return deployer's address
@@ -61,7 +65,7 @@ interface TangleTunesI {
      * @notice provides the amount of songs available
      * @return amount of songs
      */
-    function song_list_length() external view returns (uint256);
+    function song_list_length() external view returns (uint);
 
     /**
      * @notice provides all displayable information of a given amount of songs
@@ -110,16 +114,16 @@ interface TangleTunesI {
      * @notice provides metadata of a given song
      * @dev does not provide the list of chunks or the list of distributors
      * @param _song identification value
-     * @return [<exists>,<author>,<rightholder>,<validator>,<name>,<price>,<length>,<duration>]
+     * @return [<exists>,<author>,<rightholder>,<validator>,<name>,<price>,<length>,<duration>,<distributors>]
      */
-    function songs(bytes32 _song) external view returns (bool, address, address, address, string memory, uint, uint, uint);
+    function songs(bytes32 _song) external view returns (bool, address, address, address, string memory, uint, uint, uint, uint);
 
     /**
      * @notice provides metadata about a given distribution
      * @param _distribution identification value
      * @return [<exists>,<index>,<fee>]
      */
-    function distributions(bytes32 _distribution) external view returns (bool, uint, uint);
+    function distributions(bytes32 _distribution) external view returns (uint, address);
 
     /**
      * @notice provides song identification value of a given index
@@ -216,34 +220,42 @@ interface TangleTunesI {
     function gen_distribution_id(bytes32 _song, address _distributor) external pure returns (bytes32);
 
     /**
-     * @notice signs up for distribution on a given song
-     * @param _song identification value
-     * @param _fee per chunk
+     * @notice signs up for distribution or updates fee on a given song
+     * @dev _index_addr is equal to address(0) if distributor is the head of the list
+     * @param _songs list of song identification values
+     * @param _fees per chunk per song
+     * @param _index_addresses addresses of the previous distributors per song
      */
-    function distribute(bytes32 _song, uint _fee) external;
+    function distribute(bytes32[] memory _songs, uint[] memory _fees, address[] memory _index_addresses) external;
 
     /**
-     * @notice changes the distribution fee on a given song
-     * @param _song identification value
-     * @param _fee per chunk
+     * @notice unlist for distribution on a given list of song
+     * @dev _index_addr is equal to address(0) if distributor is the head of the list
+     * @param _songs list of song identification values
+     * @param _index_addresses addresses of the previous distributors per song
      */
-    function edit_fee(bytes32 _song, uint _fee) external;
+    function undistribute(bytes32[] memory _songs, address[] memory _index_addresses) external;
 
-    /**
-     * @notice unlist for distribution on a given song
-     * @param _song identification value
-     */
-    function undistribute(bytes32 _song) external;
+    //TODO
+    function find_insert_indexes(bytes32[] memory _songs, uint[] memory _fees) external view returns (address[] memory);
+
+    //TODO
+    function find_dist_indexes(bytes32[] memory _songs, address[] memory _dist_addresses) external view returns (address[] memory);
+
+    //TODO
+    function get_distributors_length(bytes32 _song) external view returns (uint);
+
+    //TODO
+    function get_distributors(bytes32 _song, address _start, uint _amount) external view returns (Distribution_listing[] memory);
 
     /**
      * @notice provides a random distributor for a given song
      * @param _song identification value
-     * @return the address of a distributor of the given song and its server information
+     * @param _seed source of randomness [0, 2^256]
+     * @return the address of a distributor, its server information and its fee
      */
-    function get_rand_distributor(bytes32 _song) external view returns (address, string memory);
-    //TODO: provide based on distribution fee and/or staking value (+ some randomness)
-    //TODO: get_distributor(bytes32 _song, uint _amount, uint _region) external view returns (address[]);
-
+    function get_rand_distributor(bytes32 _song, uint _seed) external view returns (Distribution_listing memory);
+ 
     /**
      * @notice provides the amount of chunks in a given song
      * @param _song identification value
