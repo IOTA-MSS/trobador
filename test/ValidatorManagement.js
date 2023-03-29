@@ -13,7 +13,7 @@ describe("Validator Management", function () {
         return { contract, deployer, validator, addr1 }
     }
 
-    it("Deployer Should be able to assign a validator", async function () {
+    it("Deployer should be able to assign a validator", async function () {
         const { contract, validator, addr1 } = await loadFixture(deployedContractFixture)
         //normal users cannot assign validators
         await expect(contract.connect(validator).manage_validators(validator.address))

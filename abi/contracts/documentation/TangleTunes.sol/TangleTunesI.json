@@ -106,7 +106,12 @@
       },
       {
         "internalType": "address[]",
-        "name": "_index_addresses",
+        "name": "_dist_index_addresses",
+        "type": "address[]"
+      },
+      {
+        "internalType": "address[]",
+        "name": "_insert_index_addresses",
         "type": "address[]"
       }
     ],

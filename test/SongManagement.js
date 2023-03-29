@@ -72,6 +72,9 @@ describe("Song Management", function () {
             expect(v).to.equal(values[i])
         });
         expect(await contract.chunks_length(song_id)).to.equal(song.chunks.length)
+        Object.values(await contract.check_chunks(song_id, 0, song.chunks.length)).map(function(v, i) {
+            expect(v).to.equal(song.chunks[i])
+        })
         //song_list updated correctly
         expect(await contract.song_list_length()).to.equal(1)
         expect(await contract.song_list(0)).to.equal(song_id)

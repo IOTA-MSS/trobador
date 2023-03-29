@@ -224,9 +224,10 @@ interface TangleTunesI {
      * @dev _index_addr is equal to address(0) if distributor is the head of the list
      * @param _songs list of song identification values
      * @param _fees per chunk per song
-     * @param _index_addresses addresses of the previous distributors per song
+     * @param _dist_index_addresses addresses of the previous distributors of existing distribution
+     * @param _insert_index_addresses addresses of the previous distributors where to insert new distribution
      */
-    function distribute(bytes32[] memory _songs, uint[] memory _fees, address[] memory _index_addresses) external;
+    function distribute(bytes32[] memory _songs, uint[] memory _fees, address[] memory _dist_index_addresses, address[] memory _insert_index_addresses) external;
 
     /**
      * @notice unlist for distribution on a given list of song
