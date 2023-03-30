@@ -7,11 +7,13 @@ describe("Distribution Management", function () {
         const contract = await Contract.deploy()
         await contract.deployed()
     
-        const [deployer, validator, rightholder, author, dist0, dist1, dist2, dist3, addr1] = await ethers.getSigners()
+        const [deployer, validator, rightholder, author, listener, dist0, dist1, dist2, dist3, addr1] = await ethers.getSigners()
         await contract.connect(validator).create_user("Validator", "")
         await contract.connect(rightholder).create_user("Rightholder", "")
         await contract.connect(author).create_user("Author", "")
+        await contract.connect(listener).create_user("Listener", "")
         await contract.manage_validators(validator.address)
+        await contract.connect(listener).deposit({ value: ethers.utils.parseEther("10") })
         await contract.connect(dist0).create_user("Dist0", "")
         await contract.connect(dist1).create_user("Dist1", "")
         await contract.connect(dist2).create_user("Dist2", "")
@@ -42,7 +44,7 @@ describe("Distribution Management", function () {
 
         const song_id = ethers.utils.solidityKeccak256(["string", "address"], [song.name, song.author])
 
-        return { contract, song_id, deployer, validator, rightholder, author, dist0, dist1, dist2, dist3, addr1 }
+        return { contract, song_id, deployer, validator, rightholder, author, listener, dist0, dist1, dist2, dist3, addr1 }
     }
 
     async function check_distributor(contract, song_id, size, addresses, fees) {
@@ -156,8 +158,7 @@ describe("Distribution Management", function () {
         await contract.connect(dist3).distribute([song_id], [3], [ethers.constants.AddressZero], await contract.find_insert_indexes([song_id], [3]))
 
         //can't undristribute without distributing first
-        await expect(contract.find_dist_indexes([song_id], dist2.address))
-            .to.be.revertedWith('Song is not being distributed');
+        expect((await contract.find_dist_indexes([song_id], dist2.address))[0]).to.equal(ethers.constants.AddressZero)
         await expect(contract.connect(dist2).undistribute([song_id], [dist1.address]))
             .to.be.revertedWith('Song is not being distributed');
 
@@ -235,5 +236,30 @@ describe("Distribution Management", function () {
         expect((await contract.is_distributing([song_id], dist1.address))[0]).to.equal(false)
         expect((await contract.is_distributing([song_id], dist2.address))[0]).to.equal(false)
         expect((await contract.is_distributing([song_id], dist3.address))[0]).to.equal(false)
+    });
+
+    it("User can get chunks from a distributor", async function () {
+        const { contract, song_id, rightholder, listener, dist0, dist1, dist2, dist3, addr1 } = await loadFixture(deployedContractFixture)
+
+        // order_of_insert => [(dist1, 1), (dist0, 0), (dist3, 3), (dist2, 2)]
+        await contract.connect(dist1).distribute([song_id], [1], [ethers.constants.AddressZero], await contract.find_insert_indexes([song_id], [1]))
+        await contract.connect(dist0).distribute([song_id], [0], [ethers.constants.AddressZero], await contract.find_insert_indexes([song_id], [0]))
+        await contract.connect(dist3).distribute([song_id], [3], [ethers.constants.AddressZero], await contract.find_insert_indexes([song_id], [3]))
+        await contract.connect(dist2).distribute([song_id], [2], [ethers.constants.AddressZero], await contract.find_insert_indexes([song_id], [2]))
+
+        for (let i = 0; i < 4; i ++) {
+            const dist_addr = (await contract.get_rand_distributor(song_id, i)).distributor
+            const listener_balance = (await contract.users(listener.address)).balance
+            const dist_balance = (await contract.users(dist_addr)).balance
+            const rightholder_balance = (await contract.users(rightholder.address)).balance
+
+            await contract.connect(listener).get_chunks(song_id, 0, 3, dist_addr)
+
+            const song_price = (await contract.songs(song_id)).price * 3
+            const fee_price = i * 3
+            expect((await contract.users(listener.address)).balance).to.equal(listener_balance.sub(song_price + fee_price))
+            expect((await contract.users(dist_addr)).balance).to.equal(dist_balance.add(fee_price))
+            expect((await contract.users(rightholder.address)).balance).to.equal(rightholder_balance.add(song_price))
+        }
     });
 });

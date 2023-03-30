@@ -70,6 +70,7 @@ interface TangleTunesI {
     /**
      * @notice provides all displayable information of a given amount of songs
      * @dev a song has been removed and should not be displayed if its id is 0x00
+     * @dev repeated ocurrences of the same song may appear
      * @param _index in list of songs
      * @param _amount of songs returned
      * @return list of songs
@@ -89,10 +90,22 @@ interface TangleTunesI {
      */
     function get_author_of_length(address _user) external view returns (uint);
 
-    //TODO
+    /**
+     * @notice provides all displayable information of a given amount of songs the user is author of
+     * @dev a song has been removed and should not be displayed if its id is 0x00
+     * @dev repeated ocurrences of the same song may appear
+     * @param _index in list of songs
+     * @param _amount of songs returned
+     * @return list of songs
+     */
     function get_author_of_songs(address _user, uint _index, uint _amount) external view returns (Song_listing[] memory);
 
-    //TODO
+    /**
+     * @notice provides song identification value of a given index in the list of songs the user is author of
+     * @dev id may correspond to a song that no longer exists
+     * @param _index in the list of songs (starting at 0)
+     * @return song id
+     */
     function get_author_of_song_id(address _user, uint _index) external view returns (bytes32);
 
     /**
@@ -101,10 +114,22 @@ interface TangleTunesI {
      */
     function get_holds_rights_to_length(address _user) external view returns (uint);
 
-    //TODO
+    /**
+     * @notice provides all displayable information of a given amount of songs the user holds the rigths to
+     * @dev a song has been removed and should not be displayed if its id is 0x00
+     * @dev repeated ocurrences of the same song may appear
+     * @param _index in list of songs
+     * @param _amount of songs returned
+     * @return list of songs
+     */
     function get_holds_rights_to_songs(address _user, uint _index, uint _amount) external view returns (Song_listing[] memory);
 
-    //TODO
+    /**
+     * @notice provides song identification value of a given index in the list of songs the user holds the rigths to
+     * @dev id may correspond to a song that no longer exists
+     * @param _index in the list of songs (starting at 0)
+     * @return song id
+     */
     function get_holds_rights_to_song_id(address _user, uint _index) external view returns (bytes32);
 
     /**
@@ -113,10 +138,22 @@ interface TangleTunesI {
      */
     function get_validates_length(address _user) external view returns (uint);
 
-    //TODO
+    /**
+     * @notice provides all displayable information of a given amount of songs the user has validated
+     * @dev a song has been removed and should not be displayed if its id is 0x00
+     * @dev repeated ocurrences of the same song may appear
+     * @param _index in list of songs
+     * @param _amount of songs returned
+     * @return list of songs
+     */
     function get_validates_songs(address _user, uint _index, uint _amount) external view returns (Song_listing[] memory);
 
-    //TODO
+    /**
+     * @notice provides song identification value of a given index in the list of songs the user has validated
+     * @dev id may correspond to a song that no longer exists
+     * @param _index in the list of songs (starting at 0)
+     * @return song id
+     */
     function get_validates_song_id(address _user, uint _index) external view returns (bytes32);
 
     /**
@@ -136,6 +173,7 @@ interface TangleTunesI {
 
     /**
      * @notice provides song identification value of a given index
+     * @dev id may correspond to a song that no longer exists
      * @param _index in the list of songs (starting at 0)
      * @return song id
      */
@@ -176,10 +214,14 @@ interface TangleTunesI {
 
     /**
      * @notice adds value to the sender address' account
+     * @dev the value added is equal to the value of the transaction
      */
     function deposit() external payable;
 
-    //TODO
+    /**
+     * @notice sends account's balance to its L2 wallet address
+     * @param _amount to be withdrawn
+     */
     function withdraw_to_chain(uint _amount) external;
 
     /**
@@ -202,7 +244,11 @@ interface TangleTunesI {
      */
     function upload_song(address _author, string memory _name, uint _price, uint _length, uint _duration, bytes32[] memory _chunks, uint _nonce, bytes memory _signature) external;
 
-    //TODO:
+    /**
+     * @notice remove all information about a given song from the smart contract storage
+     * @dev only accessible to the song's validator, author or rightholder
+     * @param _song identification value
+     */
     function delete_song(bytes32 _song) external;
 
     /**
@@ -246,19 +292,44 @@ interface TangleTunesI {
      */
     function undistribute(bytes32[] memory _songs, address[] memory _index_addresses) external;
 
-    //TODO
+    /**
+     * @notice finds the addresses of the distributors after which it should be inserted based on the given fees
+     * @param _songs list of song identification values
+     * @param _fees list of fees per chunk per song
+     * @return list of indexes per song
+     */
     function find_insert_indexes(bytes32[] memory _songs, uint[] memory _fees) external view returns (address[] memory);
 
-    //TODO
+    /**
+     * @notice finds the index in the distribution list where the given distributor can be found
+     * @param _songs list of song identification values
+     * @param _dist_addr distributor
+     * @return list of indexes per song
+     */
     function find_dist_indexes(bytes32[] memory _songs, address _dist_addr) external view returns (address[] memory);
 
-    //TODO
+    /**
+     * @notice checks that the given distributor is on the songs' distribution lists
+     * @param _songs list of song identification values
+     * @param _dist_addr distributor
+     * @return list of booleans per song
+     */
     function is_distributing(bytes32[] memory _songs, address _dist_addr) external view returns (bool[] memory);
 
-    //TODO
+    /**
+     * @notice provides the amount of distributors for a given song
+     * @param _song identification value
+     * @return amount of distributors
+     */
     function get_distributors_length(bytes32 _song) external view returns (uint);
 
-    //TODO
+    /**
+     * @notice provides a given amount of distributors for a given song
+     * @param _song identification value
+     * @param _start distributor at which to start traversing
+     * @param _amount of distributos
+     * @return list of addressess, servers and fees per distributor
+     */
     function get_distributors(bytes32 _song, address _start, uint _amount) external view returns (Distribution_listing[] memory);
 
     /**

@@ -367,7 +367,9 @@ contract TangleTunes is TangleTunesI {
     function _find_dist_index(bytes32 _song, address _dist_addr) internal songExists(_song) view returns (address) {
         //Compute distribution id
         bytes32 _dist_id = gen_distribution_id(_song, _dist_addr);
-        require(distributions[_dist_id].next_distributor != address(0), "Song is not being distributed");
+        if (distributions[_dist_id].next_distributor == address(0)) {
+            return address(0);
+        }
 
         address _index_addr = address(0);
         bytes32 _index = _song;
@@ -496,7 +498,7 @@ contract TangleTunes is TangleTunesI {
 
         // Distribute balance
         users[msg.sender].balance -= total_price;
-        users[song_obj.author].balance += song_obj.price * _amount;
+        users[song_obj.rightholder].balance += song_obj.price * _amount;
         users[_distributor].balance += dist_obj.fee * _amount;
     }
 
