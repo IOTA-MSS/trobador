@@ -190,6 +190,7 @@ contract TangleTunes is TangleTunesI {
         address _rightholder = _recoverSigner(_msgHash, _signature);
         require(users[_rightholder].exists, "Rightholder is not a valid user");
         require(users[_author].exists, "Author is not a valid user");
+        require(_nonce == users[_author].author_of.length, "Nonce is incorrect");
 
         //Compute song id
         bytes32 _song = gen_song_id(_name, _author);
