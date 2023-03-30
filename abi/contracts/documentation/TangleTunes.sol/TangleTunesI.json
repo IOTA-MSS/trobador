@@ -196,9 +196,9 @@
         "type": "bytes32[]"
       },
       {
-        "internalType": "address[]",
-        "name": "_dist_addresses",
-        "type": "address[]"
+        "internalType": "address",
+        "name": "_dist_addr",
+        "type": "address"
       }
     ],
     "name": "find_dist_indexes",
@@ -781,6 +781,30 @@
         "internalType": "struct TangleTunesI.Song_listing[]",
         "name": "",
         "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32[]",
+        "name": "_songs",
+        "type": "bytes32[]"
+      },
+      {
+        "internalType": "address",
+        "name": "_dist_addr",
+        "type": "address"
+      }
+    ],
+    "name": "is_distributing",
+    "outputs": [
+      {
+        "internalType": "bool[]",
+        "name": "",
+        "type": "bool[]"
       }
     ],
     "stateMutability": "view",

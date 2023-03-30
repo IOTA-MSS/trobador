@@ -41,8 +41,8 @@ contract TangleTunes is TangleTunesI {
             bytes32 song_id = _list[_index + i];
 
             //Only add information if song is still available (Could have been removed)
-            if (song_id != bytes32(0)) {
-                Song storage song_obj = songs[song_id];
+            Song storage song_obj = songs[song_id];
+            if (song_obj.exists) {
                 lst[i] = Song_listing(
                     song_id,
                     song_obj.name,
@@ -123,6 +123,7 @@ contract TangleTunes is TangleTunesI {
 
     function _delete_all_songs_in_list(bytes32[] storage _list) internal {
         for (uint256 i = 0; i < _list.length; i++) {
+            _undistribute_all(_list[i]);
             delete songs[_list[i]];
         }
     }
@@ -245,6 +246,7 @@ contract TangleTunes is TangleTunesI {
     function delete_song(bytes32 _song) external songExists(_song) {
         Song storage song_obj = songs[_song];
         require(msg.sender == song_obj.author || msg.sender == song_obj.rightholder || msg.sender == song_obj.validator, "Only Validator & Author & Rightholder are allowed");
+        _undistribute_all(_song);
         delete songs[_song];
     }
 
@@ -322,7 +324,7 @@ contract TangleTunes is TangleTunesI {
         } else {
             _index = gen_distribution_id(_song, _index_addr);
         } 
-        require(_get_next_dist_id(_song, _index) == _dist_id, "Incorrect previous distributor");
+        require(_get_next_dist_id(_song, _index) == _dist_id, "Incorrect distributor index");
 
         //Remove distributor from ordered list
         _remove_distribution(_song, _dist_id, _index);
@@ -381,12 +383,10 @@ contract TangleTunes is TangleTunesI {
         return address(0);
     }
 
-    function find_dist_indexes(bytes32[] memory _songs, address[] memory _dist_addresses) external view returns (address[] memory) {
-        require(_songs.length == _dist_addresses.length, "Lists must be of same size");
-
+    function find_dist_indexes(bytes32[] memory _songs, address _dist_addr) external view returns (address[] memory) {
         address[] memory insert_indexes = new address[](_songs.length);
         for (uint256 i = 0; i < _songs.length; i++) {
-            insert_indexes[i] = _find_dist_index(_songs[i], _dist_addresses[i]);
+            insert_indexes[i] = _find_dist_index(_songs[i], _dist_addr);
         }
 
         return insert_indexes;
@@ -405,6 +405,27 @@ contract TangleTunes is TangleTunesI {
         distributions[_index].next_distributor = distributions[_dist_id].next_distributor;
         delete distributions[_dist_id];
         songs[_song].distributors -= 1;
+    }
+
+    function _undistribute_all(bytes32 _song) internal {
+        bytes32 _current_dist_id = _song;
+
+        while (distributions[_current_dist_id].next_distributor != END) {
+            bytes32 _next_dist_id = _get_next_dist_id(_song, _current_dist_id);
+            delete distributions[_current_dist_id];
+            _current_dist_id = _next_dist_id;
+        }
+
+        delete distributions[_current_dist_id];
+    }
+
+    function is_distributing(bytes32[] memory _songs, address _dist_addr) external view returns (bool[] memory) {        
+        bool[] memory distributing = new bool[](_songs.length);
+        for (uint256 i = 0; i < _songs.length; i++) {
+            distributing[i] = distributions[gen_distribution_id(_songs[i], _dist_addr)].next_distributor != address(0);
+        }
+
+        return distributing; 
     }
 
     function get_distributors_length(bytes32 _song) external songExists(_song) view returns (uint256) {

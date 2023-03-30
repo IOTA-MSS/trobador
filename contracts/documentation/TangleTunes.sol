@@ -83,7 +83,10 @@ interface TangleTunesI {
      */
     function users(address _user) external view returns (bool, string memory, string memory, string memory, uint, bool);
 
-    //TODO
+    /**
+     * @notice provides the amount of songs the user is author of
+     * @return amount of songs
+     */
     function get_author_of_length(address _user) external view returns (uint);
 
     //TODO
@@ -92,7 +95,10 @@ interface TangleTunesI {
     //TODO
     function get_author_of_song_id(address _user, uint _index) external view returns (bytes32);
 
-    //TODO
+    /**
+     * @notice provides the amount of songs the user holds the rigths to
+     * @return amount of songs
+     */
     function get_holds_rights_to_length(address _user) external view returns (uint);
 
     //TODO
@@ -101,7 +107,10 @@ interface TangleTunesI {
     //TODO
     function get_holds_rights_to_song_id(address _user, uint _index) external view returns (bytes32);
 
-    //TODO
+    /**
+     * @notice provides the amount of songs the user has validated
+     * @return amount of songs
+     */
     function get_validates_length(address _user) external view returns (uint);
 
     //TODO
@@ -161,7 +170,7 @@ interface TangleTunesI {
     /**
      * @notice changes server information in sender address' account
      * @dev url string contains: <ip>:<port>:<pub_key_cert>
-     * @param _server details (TODO: MIGHT CHANGE)
+     * @param _server details
      */
     function edit_server_info(string memory _server) external;
 
@@ -241,7 +250,10 @@ interface TangleTunesI {
     function find_insert_indexes(bytes32[] memory _songs, uint[] memory _fees) external view returns (address[] memory);
 
     //TODO
-    function find_dist_indexes(bytes32[] memory _songs, address[] memory _dist_addresses) external view returns (address[] memory);
+    function find_dist_indexes(bytes32[] memory _songs, address _dist_addr) external view returns (address[] memory);
+
+    //TODO
+    function is_distributing(bytes32[] memory _songs, address _dist_addr) external view returns (bool[] memory);
 
     //TODO
     function get_distributors_length(bytes32 _song) external view returns (uint);

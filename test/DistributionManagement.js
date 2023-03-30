@@ -113,13 +113,13 @@ describe("Distribution Management", function () {
             .to.be.revertedWith('Incorrect distributor distributor');
         await expect(contract.connect(dist3).distribute([song_id], [0], [author.address], await contract.find_insert_indexes([song_id], [0])))
             .to.be.revertedWith('Distributor index is not distributing');
-        await expect(contract.connect(dist3).distribute([song_id], [0], await contract.find_dist_indexes([song_id], [dist3.address]), [dist1.address]))
+        await expect(contract.connect(dist3).distribute([song_id], [0], await contract.find_dist_indexes([song_id], dist3.address), [dist1.address]))
             .to.be.revertedWith('Incorrect insert index');
-        await expect(contract.connect(dist3).distribute([song_id], [0], await contract.find_dist_indexes([song_id], [dist3.address]), [author.address]))
+        await expect(contract.connect(dist3).distribute([song_id], [0], await contract.find_dist_indexes([song_id], dist3.address), [author.address]))
             .to.be.revertedWith('Insert Index is not distributing');
 
         //last distributor in the middle
-        await contract.connect(dist3).distribute([song_id], [0], await contract.find_dist_indexes([song_id], [dist3.address]), await contract.find_insert_indexes([song_id], [0]))
+        await contract.connect(dist3).distribute([song_id], [0], await contract.find_dist_indexes([song_id], dist3.address), await contract.find_insert_indexes([song_id], [0]))
 
         const expected_addresses = [dist3.address, dist0.address, dist1.address, dist2.address]
         await check_distributor(contract, song_id, 4, expected_addresses, [0, 0, 1, 2])
@@ -137,28 +137,103 @@ describe("Distribution Management", function () {
         //detect wrong index
         await expect(contract.connect(dist0).distribute([song_id], [3], [dist2.address], await contract.find_insert_indexes([song_id], [3])))
             .to.be.revertedWith('Incorrect distributor distributor');
-        await expect(contract.connect(dist0).distribute([song_id], [3], await contract.find_dist_indexes([song_id], [dist0.address]), [dist3.address]))
+        await expect(contract.connect(dist0).distribute([song_id], [3], await contract.find_dist_indexes([song_id], dist0.address), [dist3.address]))
             .to.be.revertedWith('Incorrect insert index');
 
         //last distributor in the middle
-        await contract.connect(dist0).distribute([song_id], [3], await contract.find_dist_indexes([song_id], [dist0.address]), await contract.find_insert_indexes([song_id], [3]))
+        await contract.connect(dist0).distribute([song_id], [3], await contract.find_dist_indexes([song_id], dist0.address), await contract.find_insert_indexes([song_id], [3]))
 
         const expected_addresses = [dist1.address, dist2.address, dist0.address, dist3.address]
         await check_distributor(contract, song_id, 4, expected_addresses, [1, 2, 3, 3])
     });
 
     it("Distributor should be able to undistribute song", async function () {
-        //TODO
-        expect(false).to.equal(true)
+        const { contract, song_id, dist0, dist1, dist2, dist3 } = await loadFixture(deployedContractFixture)
+
+        // order_of_insert => [(dist1, 1), (dist0, 0), (dist3, 3), (dist2, 2)]
+        await contract.connect(dist1).distribute([song_id], [1], [ethers.constants.AddressZero], await contract.find_insert_indexes([song_id], [1]))
+        await contract.connect(dist0).distribute([song_id], [0], [ethers.constants.AddressZero], await contract.find_insert_indexes([song_id], [0]))
+        await contract.connect(dist3).distribute([song_id], [3], [ethers.constants.AddressZero], await contract.find_insert_indexes([song_id], [3]))
+
+        //can't undristribute without distributing first
+        await expect(contract.find_dist_indexes([song_id], dist2.address))
+            .to.be.revertedWith('Song is not being distributed');
+        await expect(contract.connect(dist2).undistribute([song_id], [dist1.address]))
+            .to.be.revertedWith('Song is not being distributed');
+
+        await contract.connect(dist2).distribute([song_id], [2], [ethers.constants.AddressZero], await contract.find_insert_indexes([song_id], [2]))
+
+        //detect wrong index
+        await expect(contract.connect(dist1).undistribute([song_id], [ethers.constants.AddressZero]))
+            .to.be.revertedWith('Incorrect distributor index');
+        await expect(contract.connect(dist1).undistribute([song_id], [dist2.address]))
+            .to.be.revertedWith('Incorrect distributor index');
+        await expect(contract.connect(dist1).undistribute([song_id], [dist3.address]))
+            .to.be.revertedWith('Incorrect distributor index');
+        
+        // order_of_undist => [dist1]
+        await contract.connect(dist1).undistribute([song_id], await contract.find_dist_indexes([song_id], dist1.address))
+        let expected_addresses = [dist0.address, dist2.address, dist3.address]
+        await check_distributor(contract, song_id, 3, expected_addresses, [0, 2, 3])
+
+        //detect non-distributor as index
+        await expect(contract.connect(dist0).undistribute([song_id], [dist1.address]))
+            .to.be.revertedWith('Incorrect distributor index');
+
+        // order_of_undist => [dist0, dist3, dist2]
+        await contract.connect(dist0).undistribute([song_id], await contract.find_dist_indexes([song_id], dist0.address))
+        expected_addresses = [dist2.address, dist3.address]
+        await check_distributor(contract, song_id, 2, expected_addresses, [2, 3])
+
+        await contract.connect(dist3).undistribute([song_id], await contract.find_dist_indexes([song_id], dist3.address))
+        expected_addresses = [dist2.address]
+        await check_distributor(contract, song_id, 1, expected_addresses, [2])
+
+        await contract.connect(dist2).undistribute([song_id], await contract.find_dist_indexes([song_id], dist2.address))
+        expect(await contract.get_distributors_length(song_id)).to.equal(0)
     });
 
     it("Remove all distributions when song is directly deleted", async function () {
-        //TODO
-        expect(false).to.equal(true)
+        const { contract, song_id, author, dist0, dist1, dist2, dist3 } = await loadFixture(deployedContractFixture)
+
+        // order_of_insert => [(dist1, 1), (dist0, 0), (dist3, 3), (dist2, 2)]
+        await contract.connect(dist1).distribute([song_id], [1], [ethers.constants.AddressZero], await contract.find_insert_indexes([song_id], [1]))
+        await contract.connect(dist0).distribute([song_id], [0], [ethers.constants.AddressZero], await contract.find_insert_indexes([song_id], [0]))
+        await contract.connect(dist3).distribute([song_id], [3], [ethers.constants.AddressZero], await contract.find_insert_indexes([song_id], [3]))
+        await contract.connect(dist2).distribute([song_id], [2], [ethers.constants.AddressZero], await contract.find_insert_indexes([song_id], [2]))
+
+        expect(await contract.get_distributors_length(song_id)).to.equal(4)
+        expect((await contract.is_distributing([song_id], dist0.address))[0]).to.equal(true)
+        expect((await contract.is_distributing([song_id], dist1.address))[0]).to.equal(true)
+        expect((await contract.is_distributing([song_id], dist2.address))[0]).to.equal(true)
+        expect((await contract.is_distributing([song_id], dist3.address))[0]).to.equal(true)
+
+        //delete song
+        await contract.connect(author).delete_song(song_id)
+
+        await expect(contract.get_distributors_length(song_id))
+            .to.be.revertedWith('Song do not exist');
+        expect((await contract.is_distributing([song_id], dist0.address))[0]).to.equal(false)
+        expect((await contract.is_distributing([song_id], dist1.address))[0]).to.equal(false)
+        expect((await contract.is_distributing([song_id], dist2.address))[0]).to.equal(false)
+        expect((await contract.is_distributing([song_id], dist3.address))[0]).to.equal(false)
     });
 
     it("Remove all distributions when song is indirectly deleted", async function () {
-        //TODO
-        expect(false).to.equal(true)
+        const { contract, song_id, validator, dist0, dist1, dist2, dist3 } = await loadFixture(deployedContractFixture)
+
+        // order_of_insert => [(dist1, 1), (dist0, 0), (dist3, 3), (dist2, 2)]
+        await contract.connect(dist1).distribute([song_id], [1], [ethers.constants.AddressZero], await contract.find_insert_indexes([song_id], [1]))
+        await contract.connect(dist0).distribute([song_id], [0], [ethers.constants.AddressZero], await contract.find_insert_indexes([song_id], [0]))
+        await contract.connect(dist3).distribute([song_id], [3], [ethers.constants.AddressZero], await contract.find_insert_indexes([song_id], [3]))
+        await contract.connect(dist2).distribute([song_id], [2], [ethers.constants.AddressZero], await contract.find_insert_indexes([song_id], [2]))
+
+        //dismiss validator
+        await contract.manage_validators(validator.address)
+        
+        expect((await contract.is_distributing([song_id], dist0.address))[0]).to.equal(false)
+        expect((await contract.is_distributing([song_id], dist1.address))[0]).to.equal(false)
+        expect((await contract.is_distributing([song_id], dist2.address))[0]).to.equal(false)
+        expect((await contract.is_distributing([song_id], dist3.address))[0]).to.equal(false)
     });
 });
