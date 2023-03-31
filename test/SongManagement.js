@@ -115,8 +115,8 @@ describe("Song Management", function () {
         expect((await contract.songs(song_id)).price).to.equal(3333)
     })
 
-    it("Validator & Author & Rightholder should be able to delete their songs", async function () {
-        const { contract, song, deployer, validator, rightholder, author, addr1 } = await loadFixture(deployedContractFixture)
+    it("Author should be able to delete their songs", async function () {
+        const { contract, song, deployer, validator, author, addr1 } = await loadFixture(deployedContractFixture)
         //upload song
         const song_id = ethers.utils.solidityKeccak256(["string", "address"], [song.name, song.author])
         await contract.connect(validator).upload_song(...Object.values(song))
@@ -130,15 +130,27 @@ describe("Song Management", function () {
         expect((await contract.songs(song_id)).exists).to.equal(true)
         await contract.connect(author).delete_song(song_id)
         expect((await contract.songs(song_id)).exists).to.equal(false)
+    })
+
+    it("Rightholder should be able to delete their songs", async function () {
+        const { contract, song, validator, rightholder } = await loadFixture(deployedContractFixture)
+        //upload song
+        const song_id = ethers.utils.solidityKeccak256(["string", "address"], [song.name, song.author])
+        await contract.connect(validator).upload_song(...Object.values(song))
 
         //Rightholder can delete song
-        await contract.connect(validator).upload_song(...Object.values(song))
         expect((await contract.songs(song_id)).exists).to.equal(true)
         await contract.connect(rightholder).delete_song(song_id)
         expect((await contract.songs(song_id)).exists).to.equal(false)
+    })
+
+    it("Validator should be able to delete their songs", async function () {
+        const { contract, song, validator } = await loadFixture(deployedContractFixture)
+        //upload song
+        const song_id = ethers.utils.solidityKeccak256(["string", "address"], [song.name, song.author])
+        await contract.connect(validator).upload_song(...Object.values(song))
 
         //Validator can delete song
-        await contract.connect(validator).upload_song(...Object.values(song))
         expect((await contract.songs(song_id)).exists).to.equal(true)
         await contract.connect(validator).delete_song(song_id)
         expect((await contract.songs(song_id)).exists).to.equal(false)
