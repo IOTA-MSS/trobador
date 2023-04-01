@@ -240,13 +240,13 @@ contract TangleTunes is TangleTunesI {
 
     function edit_price(bytes32 _song, uint256 _price) external songExists(_song) {
         Song storage song_obj = songs[_song];
-        require(msg.sender == song_obj.author || msg.sender == song_obj.rightholder, "Only Author & Rightholder are allowed");
+        require(msg.sender == song_obj.rightholder, "Only Rightholder is allowed");
         song_obj.price = _price;
     }
 
     function delete_song(bytes32 _song) external songExists(_song) {
         Song storage song_obj = songs[_song];
-        require(msg.sender == song_obj.author || msg.sender == song_obj.rightholder || msg.sender == song_obj.validator, "Only Validator & Author & Rightholder are allowed");
+        require(msg.sender == song_obj.validator || msg.sender == song_obj.rightholder, "Only Validator & Rightholder are allowed");
         _undistribute_all(_song);
         delete songs[_song];
     }

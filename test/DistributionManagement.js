@@ -195,7 +195,7 @@ describe("Distribution Management", function () {
     });
 
     it("Remove all distributions when song is directly deleted", async function () {
-        const { contract, song_id, author, dist0, dist1, dist2, dist3 } = await loadFixture(deployedContractFixture)
+        const { contract, song_id, rightholder, dist0, dist1, dist2, dist3 } = await loadFixture(deployedContractFixture)
 
         // order_of_insert => [(dist1, 1), (dist0, 0), (dist3, 3), (dist2, 2)]
         await contract.connect(dist1).distribute([song_id], [1], [ethers.constants.AddressZero], await contract.find_insert_indexes([song_id], [1]))
@@ -210,7 +210,7 @@ describe("Distribution Management", function () {
         expect((await contract.is_distributing([song_id], dist3.address))[0]).to.equal(true)
 
         //delete song
-        await contract.connect(author).delete_song(song_id)
+        await contract.connect(rightholder).delete_song(song_id)
 
         await expect(contract.get_distributors_length(song_id))
             .to.be.revertedWith('Song do not exist');

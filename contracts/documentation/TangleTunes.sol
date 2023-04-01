@@ -246,7 +246,7 @@ interface TangleTunesI {
 
     /**
      * @notice remove all information about a given song from the smart contract storage
-     * @dev only accessible to the song's validator, author or rightholder
+     * @dev only accessible to the song's validator and rightholder
      * @param _song identification value
      */
     function delete_song(bytes32 _song) external;
@@ -261,7 +261,7 @@ interface TangleTunesI {
 
     /**
      * @notice changes the song's price
-     * @dev only accessible to the song's author
+     * @dev only accessible to the song's rightholder
      * @param _song identification value
      * @param _price per chunk
      */

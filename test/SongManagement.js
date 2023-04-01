@@ -93,50 +93,39 @@ describe("Song Management", function () {
         await song_listing_works(await contract.get_validates_songs(validator.address, 0, 1), song_id, song)
     });
 
-    it("Author & Rightholder should be able to change the price of a song", async function () {
+    it("Rightholder should be able to change the price of a song", async function () {
         const { contract, song, deployer, validator, rightholder, author, addr1 } = await loadFixture(deployedContractFixture)
         //upload song
         const song_id = ethers.utils.solidityKeccak256(["string", "address"], [song.name, song.author])
         await contract.connect(validator).upload_song(...Object.values(song))
-        //only Author & Rightholder can change price
+        //only Rightholder can change price
         await expect(contract.connect(deployer).edit_price(song_id, 1111))
-            .to.be.revertedWith('Only Author & Rightholder are allowed');
+            .to.be.revertedWith('Only Rightholder is allowed');
+        await expect(contract.connect(author).edit_price(song_id, 1111))
+            .to.be.revertedWith('Only Rightholder is allowed');
         await expect(contract.connect(validator).edit_price(song_id, 1111))
-            .to.be.revertedWith('Only Author & Rightholder are allowed');
+            .to.be.revertedWith('Only Rightholder is allowed');
         await expect(contract.connect(addr1).edit_price(song_id, 1111))
-            .to.be.revertedWith('Only Author & Rightholder are allowed');
-
-        //Author can change price
-        await contract.connect(author).edit_price(song_id, 2222)
-        expect((await contract.songs(song_id)).price).to.equal(2222)
+            .to.be.revertedWith('Only Rightholder is allowed');
 
         //Rightholder can change price
-        await contract.connect(rightholder).edit_price(song_id, 3333)
-        expect((await contract.songs(song_id)).price).to.equal(3333)
-    })
-
-    it("Author should be able to delete their songs", async function () {
-        const { contract, song, deployer, validator, author, addr1 } = await loadFixture(deployedContractFixture)
-        //upload song
-        const song_id = ethers.utils.solidityKeccak256(["string", "address"], [song.name, song.author])
-        await contract.connect(validator).upload_song(...Object.values(song))
-        //only Validator & Author & Rightholder can delete song
-        await expect(contract.connect(deployer).delete_song(song_id))
-            .to.be.revertedWith('Only Validator & Author & Rightholder are allowed');
-        await expect(contract.connect(addr1).delete_song(song_id))
-            .to.be.revertedWith('Only Validator & Author & Rightholder are allowed');
-
-        //Author can delete song
-        expect((await contract.songs(song_id)).exists).to.equal(true)
-        await contract.connect(author).delete_song(song_id)
-        expect((await contract.songs(song_id)).exists).to.equal(false)
+        await contract.connect(rightholder).edit_price(song_id, 2222)
+        expect((await contract.songs(song_id)).price).to.equal(2222)
     })
 
     it("Rightholder should be able to delete their songs", async function () {
-        const { contract, song, validator, rightholder } = await loadFixture(deployedContractFixture)
+        const { contract, song, deployer, validator, rightholder, author, addr1 } = await loadFixture(deployedContractFixture)
         //upload song
         const song_id = ethers.utils.solidityKeccak256(["string", "address"], [song.name, song.author])
         await contract.connect(validator).upload_song(...Object.values(song))
+
+        //only Validator & Rightholder can delete song
+        await expect(contract.connect(deployer).delete_song(song_id))
+            .to.be.revertedWith('Only Validator & Rightholder are allowed');
+        await expect(contract.connect(addr1).delete_song(song_id))
+            .to.be.revertedWith('Only Validator & Rightholder are allowed');
+        await expect(contract.connect(author).delete_song(song_id))
+            .to.be.revertedWith('Only Validator & Rightholder are allowed');
 
         //Rightholder can delete song
         expect((await contract.songs(song_id)).exists).to.equal(true)
