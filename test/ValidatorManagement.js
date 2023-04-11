@@ -31,7 +31,7 @@ describe("Validator Management", function () {
         expect((await contract.users(addr1.address)).is_validator).to.equal(false);
     });
 
-    it("Deployer should be able to dismiss a validor", async function () {
+    it("Deployer should be able to dismiss a validator", async function () {
         const { contract, validator, addr1 } = await loadFixture(deployedContractFixture)
         
         await contract.manage_validators(validator.address)
